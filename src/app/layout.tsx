@@ -60,7 +60,7 @@ function Footer() {
           <span>Live chess broadcasts for African federations</span>
         </div>
         <div style={{ display: "flex", gap: 20 }}>
-          <a href="http://127.0.0.1:3000" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent)" }}>
+          <a href="https://prochess-lovat.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent)" }}>
             ♟ Prochess Academy
           </a>
           <a href="https://lichess.org" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-text-muted)" }}>

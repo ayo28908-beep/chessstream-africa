@@ -41,9 +41,8 @@ export default function Nav() {
           <NavLink href="/broadcasts">Broadcasts</NavLink>
           <NavLink href="/players">Players</NavLink>
           <NavLink href="/schools">Schools</NavLink>
-          <NavLink href="/admin">Admin</NavLink>
           <a
-            href="http://127.0.0.1:3000"
+            href="https://prochess-lovat.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-ghost"

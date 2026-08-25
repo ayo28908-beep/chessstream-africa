@@ -49,39 +49,19 @@ interface BroadcastSummary {
   roundCount?: number;
 }
 
-// Demo data for when Lichess API is unavailable
-const DEMO_GAMES: LiveGame[] = [
-  { id: "1", white: { name: "Abdulraheem, A.", rating: 2316, title: "FM", fideId: 8510001 }, black: { name: "Kigigha, B.", rating: 2287, title: "FM", fideId: 8510002 }, fen: "r1bqkb1r/pppppppp/2n2n2/8/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 2 3", status: "in-progress", eval: 0.3, lastMove: "e4", moveCount: 5, result: "*" },
-  { id: "2", white: { name: "Anwuli, D.", rating: 2325, title: "IM", fideId: 8510003 }, black: { name: "Adebayo, A.", rating: 2272, fideId: 8510004 }, fen: "rnbqk2r/pppp1ppp/5n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4", status: "in-progress", eval: -0.2, lastMove: "Bc4", moveCount: 7, result: "*" },
-  { id: "3", white: { name: "Lapite, O.", rating: 2228, fideId: 8510005 }, black: { name: "Ekunke, O.", rating: 2280, title: "FM", fideId: 8510006 }, fen: "r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2", status: "in-progress", eval: 0.1, lastMove: "Nf6", moveCount: 3, result: "*" },
-  { id: "4", white: { name: "Eyenuke, T.", rating: 2256, fideId: 8510007 }, black: { name: "Adeyemi, O.", rating: 2248, fideId: 8510008 }, fen: "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1", status: "in-progress", eval: 0.0, lastMove: "d4", moveCount: 1, result: "*" },
-  { id: "5", white: { name: "Aikhoje, O.", rating: 2246, fideId: 8510009 }, black: { name: "Akintoye, B.", rating: 2220, fideId: 8510010 }, fen: "rnbqkbnr/pppppppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2", status: "in-progress", eval: 0.15, lastMove: "e5", moveCount: 2, result: "*" },
-  { id: "6", white: { name: "Sorungbe, A.", rating: 2228, fideId: 8510011 }, black: { name: "Olape, B.", rating: 2186, fideId: 8510012 }, fen: "r1bqkbnr/pppppppp/2n5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2", status: "in-progress", eval: 0.4, lastMove: "Nc6", moveCount: 2, result: "*" },
-];
-
-const DEMO_ROUNDS: LiveRound[] = [
-  { id: "r1", name: "Round 1", finished: true, nbGames: 6 },
-  { id: "r2", name: "Round 2", finished: true, nbGames: 6 },
-  { id: "r3", name: "Round 3", finished: true, nbGames: 6 },
-  { id: "r4", name: "Round 4", finished: true, nbGames: 6 },
-  { id: "r5", name: "Round 5", ongoing: true, nbGames: 6 },
-  { id: "r6", name: "Round 6", nbGames: 6 },
-  { id: "r7", name: "Round 7", nbGames: 6 },
-  { id: "r8", name: "Round 8", nbGames: 6 },
-  { id: "r9", name: "Round 9", nbGames: 6 },
-  { id: "r10", name: "Round 10", nbGames: 6 },
-];
+// No demo data — show real loading/error states only.
+// This is a live broadcasting platform; fabricating games would mislead viewers.
 
 export default function BroadcastViewer({ tournamentId }: { tournamentId?: string }) {
   const [broadcast, setBroadcast] = useState<BroadcastSummary | null>(null);
   const [allBroadcasts, setAllBroadcasts] = useState<BroadcastSummary[]>([]);
-  const [rounds, setRounds] = useState<LiveRound[]>(DEMO_ROUNDS);
-  const [activeRoundId, setActiveRoundId] = useState<string>("r5");
-  const [games, setGames] = useState<LiveGame[]>(DEMO_GAMES);
+  const [rounds, setRounds] = useState<LiveRound[]>([]);
+  const [activeRoundId, setActiveRoundId] = useState<string>("");
+  const [games, setGames] = useState<LiveGame[]>([]);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [isLive, setIsLive] = useState(false);
-  const [dataSource, setDataSource] = useState<"live" | "demo">("demo");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
 
   // Fetch broadcast list from Lichess
@@ -105,7 +85,6 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
       }
 
       setAllBroadcasts(all);
-      setDataSource("live");
       setIsLive(true);
 
       // Pick the best broadcast: one with finished rounds (nbGames is unreliable in the list endpoint)
@@ -126,8 +105,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
         }
       }
     } catch {
-      console.log("Lichess API unavailable, using demo data");
-      setDataSource("demo");
+      setError("Unable to load broadcasts. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -135,7 +113,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
 
   // Fetch games for a specific round
   const fetchRoundGames = useCallback(async (roundId: string) => {
-    if (!roundId || roundId.startsWith("r")) return; // demo round
+    if (!roundId) return;
 
     try {
       const res = await fetch(`/api/lichess/round/${roundId}`);
@@ -144,7 +122,6 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
 
       if (data.games && data.games.length > 0) {
         setGames(data.games);
-        setDataSource("live");
       } else {
         // Round exists but has no games yet — clear the board area
         setGames([]);
@@ -181,24 +158,23 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
 
   // Fetch games when round changes
   useEffect(() => {
-    if (activeRoundId && !activeRoundId.startsWith("r")) {
+    if (activeRoundId) {
       fetchRoundGames(activeRoundId);
     }
   }, [activeRoundId, fetchRoundGames]);
 
   // Poll for live updates every 15 seconds (only for live data)
   useEffect(() => {
-    if (dataSource !== "live" || !activeRoundId || activeRoundId.startsWith("r")) return;
+    if (!isLive || !activeRoundId || activeRoundId.startsWith("r")) return;
 
     const interval = setInterval(() => {
       fetchRoundGames(activeRoundId);
     }, 15000);
     return () => clearInterval(interval);
-  }, [dataSource, activeRoundId, fetchRoundGames]);
+  }, [isLive, activeRoundId, fetchRoundGames]);
 
   // Find current round info
   const currentRound = rounds.find((r) => r.id === activeRoundId);
-  const liveGameCount = games.filter((g) => g.status === "in-progress").length;
 
   return (
     <div>
@@ -258,7 +234,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
               {allBroadcasts.length} tournaments ▾
             </span>
           )}
-          {dataSource === "live" && (
+          {isLive && (
             <span
               style={{
                 fontSize: 10,
@@ -456,7 +432,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
               </span>
             </>
           )}
-          {dataSource === "live" && (
+          {isLive && (
             <span
               style={{
                 fontSize: 10,
@@ -487,8 +463,35 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
         ))}
       </div>
 
+      {/* Loading state */}
+      {loading && (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--color-text-muted)" }}>
+          <div style={{ fontSize: 32, marginBottom: 8, animation: "pulse 1.5s ease-in-out infinite" }}>♟</div>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Loading live broadcasts...</div>
+          <div style={{ fontSize: 13 }}>Connecting to Lichess</div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {!loading && error && (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            background: "rgba(248,113,113,0.06)",
+            border: "1px solid rgba(248,113,113,0.15)",
+            borderRadius: 12,
+            color: "var(--color-text-muted)",
+          }}
+        >
+          <div style={{ fontSize: 32, marginBottom: 8 }}>⚠</div>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, color: "var(--color-eval-bad)" }}>Connection failed</div>
+          <div style={{ fontSize: 13 }}>{error}</div>
+        </div>
+      )}
+
       {/* Empty state */}
-      {!loading && games.length === 0 && (
+      {!loading && !error && games.length === 0 && (
         <div
           style={{
             textAlign: "center",

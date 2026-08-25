@@ -1,10 +1,17 @@
 import Link from "next/link";
 import type { BroadcastTournament } from "@/lib/lichess";
 
+function getStartDate(dates?: BroadcastTournament["dates"]): number | undefined {
+  if (!dates) return undefined;
+  if (Array.isArray(dates)) return dates[0];
+  return dates.start;
+}
+
 export default function BroadcastCard({ tournament }: { tournament: BroadcastTournament }) {
   const isLive = tournament.tier && tournament.tier >= 1;
   const now = Date.now();
-  const isUpcoming = tournament.dates?.start && tournament.dates.start > now;
+  const startDate = getStartDate(tournament.dates);
+  const isUpcoming = startDate && startDate > now;
 
   return (
     <Link
@@ -72,8 +79,8 @@ export default function BroadcastCard({ tournament }: { tournament: BroadcastTou
         )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--color-text-muted)" }}>
-          {tournament.dates?.start && (
-            <span>{new Date(tournament.dates.start).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}</span>
+          {startDate && (
+            <span>{new Date(startDate).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}</span>
           )}
           {tournament.tier && (
             <>

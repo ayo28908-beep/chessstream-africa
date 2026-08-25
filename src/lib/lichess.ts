@@ -10,7 +10,7 @@ export interface BroadcastTournament {
   description?: string;
   official?: boolean;
   tier?: number;
-  dates?: { start: number; end: number };
+  dates?: { start: number; end: number } | number[];
 }
 
 export interface BroadcastRound {
@@ -51,22 +51,34 @@ export interface BroadcastWithRound {
 }
 
 // Fetch upcoming + ongoing broadcasts
+// Lichess returns NDJSON (one JSON object per line), NOT a single JSON document.
 export async function fetchBroadcasts(): Promise<BroadcastTournament[]> {
-  const res = await fetch(`${LICHESS_API}/broadcast`, {
-    headers: { Accept: "application/json" },
+  const res = await fetch(`${LICHESS_API}/broadcast?nb=20`, {
+    headers: { Accept: "application/x-ndjson" },
     next: { revalidate: 60 },
   });
   if (!res.ok) throw new Error(`Lichess API error: ${res.status}`);
-  const data = await res.json();
-  return data.upcoming?.map((b: Record<string, unknown>) => ({
-    id: (b.tournament as BroadcastTournament)?.id || b.id as string,
-    name: (b.tournament as BroadcastTournament)?.name || b.name as string,
-    slug: (b.tournament as BroadcastTournament)?.slug || b.slug as string,
-    description: (b.tournament as BroadcastTournament)?.description,
-    official: (b.tournament as BroadcastTournament)?.official,
-    tier: (b.tournament as BroadcastTournament)?.tier,
-    dates: (b.tournament as BroadcastTournament)?.dates,
-  })) || [];
+  const text = await res.text();
+  const broadcasts: BroadcastTournament[] = [];
+  for (const line of text.trim().split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const obj = JSON.parse(line);
+      const t = obj.tour || obj;
+      broadcasts.push({
+        id: t.id || "",
+        name: t.name || "",
+        slug: t.slug || "",
+        description: t.info?.format || t.description || "",
+        official: t.official || false,
+        tier: t.tier || 0,
+        dates: t.dates || [],
+      });
+    } catch {
+      // Skip malformed lines
+    }
+  }
+  return broadcasts;
 }
 
 // Fetch rounds for a broadcast tournament

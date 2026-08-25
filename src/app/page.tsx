@@ -1,14 +1,33 @@
 import Link from "next/link";
-import { fetchBroadcasts, type BroadcastTournament } from "@/lib/lichess";
 import BroadcastCard from "@/components/BroadcastCard";
 import FeaturesGrid from "@/components/FeaturesGrid";
 
-export default async function HomePage() {
-  let broadcasts: Awaited<ReturnType<typeof fetchBroadcasts>> = [];
+async function fetchBroadcastsFromProxy(): Promise<{ id: string; name: string; slug: string; tier?: number; location?: string; dates?: number[] }[]> {
   try {
-    broadcasts = await fetchBroadcasts();
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/lichess/broadcasts`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const all: { id: string; name: string; slug: string; tier?: number; location?: string; dates?: number[] }[] = [];
+    if (data.featured) all.push(data.featured);
+    if (data.recent) {
+      for (const r of data.recent) {
+        if (!all.find((b) => b.id === r.id)) all.push(r);
+      }
+    }
+    return all;
   } catch {
-    // Lichess API unavailable — show demo data
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  let broadcasts: Awaited<ReturnType<typeof fetchBroadcastsFromProxy>> = [];
+  try {
+    broadcasts = await fetchBroadcastsFromProxy();
+  } catch {
+    // Lichess API unavailable — show empty state
   }
 
   return (

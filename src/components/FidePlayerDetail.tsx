@@ -43,13 +43,8 @@ export default function FidePlayerDetail({ player, allPlayers }: { player: Playe
         }
       })
       .catch(() => {
-        // FIDE endpoint unavailable — use random demo data
-        setCareerStats({
-          total: Math.floor(Math.random() * 200) + 50,
-          wins: Math.floor(Math.random() * 80) + 20,
-          draws: Math.floor(Math.random() * 30) + 5,
-          losses: Math.floor(Math.random() * 60) + 10,
-        });
+        // FIDE endpoint unavailable — show unavailable state (never fabricate stats)
+        setCareerStats(null);
       });
 
     // Fetch top opponents' H2H records
@@ -143,12 +138,26 @@ export default function FidePlayerDetail({ player, allPlayers }: { player: Playe
           }}>
             <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>Career</div>
             <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-              {careerStats ? `${careerStats.total}` : "—"}
+              {careerStats ? `${careerStats.total}` : <span style={{ color: "var(--color-eval-bad)", fontSize: 13 }}>unavailable</span>}
             </div>
           </div>
         </div>
 
         {/* Career record */}
+        {careerStats === null && (
+          <div style={{
+            marginTop: 12,
+            padding: "10px 14px",
+            background: "rgba(248,113,113,0.08)",
+            border: "1px solid rgba(248,113,113,0.2)",
+            borderRadius: 8,
+            fontSize: 12,
+            color: "var(--color-eval-bad)",
+            textAlign: "center",
+          }}>
+            Career stats unavailable — FIDE endpoint unreachable. Showing rating only.
+          </div>
+        )}
         {careerStats && careerStats.total > 0 && (
           <div style={{
             marginTop: 12,

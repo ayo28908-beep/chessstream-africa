@@ -17,7 +17,7 @@ interface BroadcastEntry {
 
 async function fetchBroadcasts(): Promise<{ featured: Record<string, unknown> | null; recent: BroadcastEntry[] }> {
   try {
-    const res = await fetch("http://localhost:3001/api/lichess/broadcasts", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/lichess/broadcasts`, {
       next: { revalidate: 30 },
     });
     if (!res.ok) return { featured: null, recent: [] };
