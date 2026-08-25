@@ -1,0 +1,218 @@
+@import "tailwindcss";
+
+@theme {
+  /* ChessStream Africa brand colors */
+  --color-bg: #0d1117;
+  --color-bg-raised: #161b22;
+  --color-bg-overlay: #1c2128;
+  --color-surface: #21262d;
+  --color-surface-hover: #292e36;
+  --color-border: #30363d;
+  --color-border-muted: #21262d;
+
+  /* Text */
+  --color-text: #e6edf3;
+  --color-text-muted: #8b949e;
+  --color-text-faint: #484f58;
+
+  /* Brand accent — African green/gold inspired */
+  --color-accent: #2ea043;
+  --color-accent-hover: #3fb950;
+  --color-accent-muted: rgba(46, 160, 67, 0.15);
+
+  --color-gold: #f0b429;
+  --color-gold-muted: rgba(240, 180, 41, 0.15);
+
+  /* Eval bar */
+  --color-eval-white: #f0f0f0;
+  --color-eval-black: #1a1a2e;
+  --color-eval-good: #2ea043;
+  --color-eval-bad: #da3633;
+
+  /* Status */
+  --color-live: #da3633;
+  --color-live-muted: rgba(218, 54, 51, 0.15);
+  --color-upcoming: #f0b429;
+  --color-finished: #8b949e;
+
+  /* Fonts */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+/* Utility classes */
+.wrap {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.card {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chip-live {
+  background: var(--color-live-muted);
+  color: var(--color-live);
+}
+
+.chip-live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-live);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.chip-upcoming {
+  background: var(--color-gold-muted);
+  color: var(--color-gold);
+}
+
+.chip-finished {
+  background: rgba(139, 148, 158, 0.15);
+  color: var(--color-text-muted);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-outline:hover {
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.btn-ghost:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Eval bar */
+.eval-bar {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.eval-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--color-eval-black);
+  transition: height 0.5s ease;
+}
+
+.eval-bar-text {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Live pulse animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Board hover effect */
+.board-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.board-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Grid layouts */
+.broadcast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .broadcast-grid {
+    grid-template-columns: 1fr;
+  }
+}
