@@ -194,6 +194,11 @@ a {
   50% { opacity: 0.4; }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Board hover effect */
 .board-card {
   transition: transform 0.15s ease, box-shadow 0.15s ease;

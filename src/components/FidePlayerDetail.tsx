@@ -93,7 +93,7 @@ export default function FidePlayerDetail({ player, allPlayers }: { player: Playe
             justifyContent: "center",
             fontSize: 28,
           }}>
-            ♟
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2L9 8H5l3 5-2 7h12l-2-7 3-5h-4L12 2z"/></svg>
           </div>
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 800 }}>

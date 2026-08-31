@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import type { BroadcastTournament } from "@/lib/lichess";
 
 function getStartDate(dates?: BroadcastTournament["dates"]): number | undefined {
@@ -28,7 +29,7 @@ export default function BroadcastCard({ tournament }: { tournament: BroadcastTou
         justifyContent: "center",
         position: "relative",
       }}>
-        <span style={{ fontSize: 48, opacity: 0.3 }}>♟</span>
+        <Trophy size={48} style={{ opacity: 0.15, color: "var(--color-text-muted)" }} />
         {tournament.official && (
           <span style={{
             position: "absolute",
