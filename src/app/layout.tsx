@@ -1,19 +1,52 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
+import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/JsonLd";
+
+const SITE_URL = "https://chessstream-africa.vercel.app";
 
 export const metadata: Metadata = {
   title: {
     default: "ChessStream Africa — Live Chess Broadcasts",
-    template: "%s · ChessStream Africa",
+    template: "%s | ChessStream Africa",
   },
   description:
     "Live chess broadcasting for African tournaments and federations. Real-time boards, per-game commentary, AI analysis, and player head-to-head data.",
   keywords: ["chess", "africa", "live", "broadcast", "tournament", "fide", "lichess"],
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     title: "ChessStream Africa — Live Chess Broadcasts",
     description: "Live chess broadcasting for African tournaments and federations.",
+    url: SITE_URL,
+    siteName: "ChessStream Africa",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ChessStream Africa",
+      },
+    ],
+    locale: "en_NG",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ChessStream Africa — Live Chess Broadcasts",
+    description: "Live chess broadcasting for African tournaments and federations.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -29,48 +62,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body style={{ paddingTop: 56, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <OrganizationJsonLd />
+        <WebsiteJsonLd />
         <Nav />
         <main style={{ flex: 1 }}>{children}</main>
         <Footer />
       </body>
     </html>
-  );
-}
-
-function Footer() {
-  return (
-    <footer style={{
-      borderTop: "1px solid var(--color-border)",
-      padding: "24px 0",
-      marginTop: 80,
-    }}>
-      <div className="wrap" style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: 16,
-        fontSize: 13,
-        color: "var(--color-text-muted)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 18 }}>♟</span>
-          <span style={{ fontWeight: 700, color: "var(--color-text)" }}>ChessStream Africa</span>
-          <span style={{ color: "var(--color-text-faint)" }}>·</span>
-          <span>Live chess broadcasts for African federations</span>
-        </div>
-        <div style={{ display: "flex", gap: 20 }}>
-          <a href="https://prochess-lovat.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent)" }}>
-            ♟ Prochess Academy
-          </a>
-          <a href="https://lichess.org" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-text-muted)" }}>
-            Powered by Lichess
-          </a>
-          <a href="https://fide.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-text-muted)" }}>
-            FIDE
-          </a>
-        </div>
-      </div>
-    </footer>
   );
 }

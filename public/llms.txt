@@ -1,0 +1,24 @@
+# ChessStream Africa
+
+Live chess broadcasting platform for African tournaments and federations.
+
+## About
+ChessStream Africa provides real-time chess broadcasting for African chess events. We pull live game data from Lichess broadcasts and present it in an easy-to-use web interface.
+
+## Features
+- Live broadcast viewing with real-time move updates
+- Game analysis with PGN import
+- Daily chess puzzles
+- Player directory with FIDE profiles
+- Courses from Prochess Academy
+
+## Data Sources
+- Lichess Broadcast API for live games
+- FIDE for player ratings and profiles
+
+## Links
+- Home: https://chessstream-africa.vercel.app
+- Broadcasts: https://chessstream-africa.vercel.app/broadcasts
+- Analyze: https://chessstream-africa.vercel.app/analyze
+- Puzzles: https://chessstream-africa.vercel.app/puzzles
+- Prochess Academy: https://prochess-lovat.vercel.app
