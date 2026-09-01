@@ -77,7 +77,7 @@ export default function Nav() {
           <button
             onClick={() => setOpen(!open)}
             className="btn-ghost"
-            style={{ display: "none", padding: 8 }}
+            style={{ display: "block", padding: 8 }}
           >
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>

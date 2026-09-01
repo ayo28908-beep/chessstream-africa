@@ -466,7 +466,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
       {/* Loading state */}
       {loading && (
         <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--color-text-muted)" }}>
-          <div style={{ fontSize: 32, marginBottom: 8, animation: "pulse 1.5s ease-in-out infinite" }}>♟</div>
+          <div style={{ marginBottom: 8 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--color-accent-muted)", animation: "pulse 1.5s ease-in-out infinite" }} /></div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Loading live broadcasts...</div>
           <div style={{ fontSize: 13 }}>Connecting to Lichess</div>
         </div>
@@ -484,7 +484,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
             color: "var(--color-text-muted)",
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 8 }}>⚠</div>
+          <div style={{ marginBottom: 8, color: "var(--color-eval-bad)" }}>⚠</div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, color: "var(--color-eval-bad)" }}>Connection failed</div>
           <div style={{ fontSize: 13 }}>{error}</div>
         </div>
@@ -499,7 +499,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
             color: "var(--color-text-muted)",
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 8 }}>♟</div>
+          <div style={{ marginBottom: 8 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--color-surface)" }} /></div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
             No games in this round
           </div>

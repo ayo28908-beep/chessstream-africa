@@ -1,3 +1,4 @@
+import { Zap } from "lucide-react";
 import Link from "next/link";
 import BroadcastCard from "@/components/BroadcastCard";
 import FeaturesGrid from "@/components/FeaturesGrid";
@@ -135,7 +136,7 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="card" style={{ padding: 48, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>♟</div>
+              <Zap size={48} style={{ color: "var(--color-accent)", marginBottom: 16 }} />
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No live broadcasts right now</h3>
               <p style={{ color: "var(--color-text-muted)", fontSize: 14, marginBottom: 20 }}>
                 Check back soon or browse upcoming tournaments
