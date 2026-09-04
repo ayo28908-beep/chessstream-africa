@@ -28,7 +28,7 @@ export default function StreamerPanel() {
         padding: "12px 16px",
         borderBottom: "1px solid var(--color-border)",
       }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700 }}>🎥 Live Commentary</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 700 }}>Live Commentary</h3>
       </div>
 
       <div>
@@ -85,7 +85,7 @@ export default function StreamerPanel() {
             </div>
             <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{stream.title}</div>
             <div style={{ fontSize: 11, color: "var(--color-text-faint)", marginTop: 2 }}>
-              📌 {stream.board}
+              {stream.board}
             </div>
           </a>
         ))}

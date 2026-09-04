@@ -67,7 +67,7 @@ export default function BoardChat({
         marginBottom: 8,
       }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-muted)" }}>
-          💬 Board Chat
+          Board Chat
         </span>
         <button
           onClick={onClose}

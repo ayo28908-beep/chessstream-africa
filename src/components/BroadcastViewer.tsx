@@ -297,7 +297,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
                   </div>
                   {b.location && (
                     <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 2 }}>
-                      📍 {b.location}
+                      {b.location}
                     </div>
                   )}
                 </div>
@@ -484,7 +484,7 @@ export default function BroadcastViewer({ tournamentId }: { tournamentId?: strin
             color: "var(--color-text-muted)",
           }}
         >
-          <div style={{ marginBottom: 8, color: "var(--color-eval-bad)" }}>⚠</div>
+          <div style={{ marginBottom: 8, color: "var(--color-eval-bad)" }}>!</div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, color: "var(--color-eval-bad)" }}>Connection failed</div>
           <div style={{ fontSize: 13 }}>{error}</div>
         </div>

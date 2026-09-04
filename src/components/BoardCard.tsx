@@ -230,7 +230,7 @@ export default function BoardCard({
               className="btn btn-ghost"
               style={{ fontSize: 12, padding: "4px 8px", flex: 1 }}
             >
-              💬 Chat
+              Chat
             </button>
             {game.pgnUrl ? (
               <a
@@ -240,14 +240,14 @@ export default function BoardCard({
                 className="btn btn-ghost"
                 style={{ fontSize: 12, padding: "4px 8px", flex: 1, textAlign: "center", textDecoration: "none" }}
               >
-                ♟ Lichess ↗
+                Lichess ↗
               </a>
             ) : (
               <button
                 className="btn btn-ghost"
                 style={{ fontSize: 12, padding: "4px 8px", flex: 1 }}
               >
-                📊 Analysis
+                Analysis
               </button>
             )}
           </div>
