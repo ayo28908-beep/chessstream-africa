@@ -25,7 +25,7 @@ export default function Footer() {
         </div>
         <div style={{ display: "flex", gap: 20 }}>
           <Link
-            href="https://prochess-lovat.vercel.app"
+            href="https://prochess-v2-ashen.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: "var(--color-accent)", display: "flex", alignItems: "center", gap: 4 }}

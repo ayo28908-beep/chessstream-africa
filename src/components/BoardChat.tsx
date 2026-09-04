@@ -10,12 +10,6 @@ interface ChatMessage {
   isAI?: boolean;
 }
 
-const DEMO_MESSAGES: ChatMessage[] = [
-  { id: "1", user: "ChessFan_NG", text: "Great central control from white!", time: "2m ago" },
-  { id: "2", user: "FM_Kigigha", text: "Black's knight on c6 is well placed", time: "1m ago" },
-  { id: "3", user: "AI Commentary", text: "White has a slight advantage (+0.3) due to better pawn structure. The d4 pawn controls key squares.", time: "30s ago", isAI: true },
-];
-
 export default function BoardChat({
   gameId,
   onClose,
@@ -23,7 +17,7 @@ export default function BoardChat({
   gameId: string;
   onClose: () => void;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>(DEMO_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
 
   const sendMessage = () => {

@@ -99,8 +99,8 @@ export default async function HomePage() {
             flexWrap: "wrap",
           }}>
             {[
-              { n: "1,693", label: "Nigerian players" },
-              { n: "45+", label: "African federations" },
+              { n: "1,693+", label: "Nigerian players" },
+              { n: "45+", label: "Countries tracked" },
               { n: "Live", label: "Real-time boards" },
               { n: "Free", label: "For all" },
             ].map((s) => (

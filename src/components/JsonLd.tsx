@@ -28,7 +28,7 @@ export function OrganizationJsonLd() {
         logo: "https://chessstream-africa.vercel.app/logo.png",
         description: "Live chess broadcasting for African tournaments and federations.",
         sameAs: [
-          "https://prochess-lovat.vercel.app",
+          "https://prochess-v2-ashen.vercel.app",
         ],
         contactPoint: {
           "@type": "ContactPoint",

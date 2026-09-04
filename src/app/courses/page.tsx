@@ -67,7 +67,7 @@ export default function CoursesPage() {
               {course.description}
             </p>
             <Link
-              href="https://prochess-lovat.vercel.app/courses"
+              href="https://prochess-v2-ashen.vercel.app/courses"
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-primary"
@@ -94,7 +94,7 @@ export default function CoursesPage() {
           Learn with FIDE-certified coaches and structured curriculum.
         </p>
         <Link
-          href="https://prochess-lovat.vercel.app"
+          href="https://prochess-v2-ashen.vercel.app"
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-primary"

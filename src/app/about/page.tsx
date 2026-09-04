@@ -60,7 +60,7 @@ export default function AboutPage() {
         <Link href="/broadcasts" className="btn btn-primary">
           Watch Broadcasts
         </Link>
-        <Link href="https://prochess-lovat.vercel.app" target="_blank" rel="noopener noreferrer" className="btn btn-outline">
+        <Link href="https://prochess-v2-ashen.vercel.app" target="_blank" rel="noopener noreferrer" className="btn btn-outline">
           Prochess Academy <ExternalLink size={14} />
         </Link>
       </div>

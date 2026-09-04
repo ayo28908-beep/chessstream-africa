@@ -52,7 +52,7 @@ export default function Nav() {
             <NavLink href="/courses"><BookOpen size={14} /> Courses</NavLink>
             <NavLink href="/players"><Users size={14} /> Players</NavLink>
             <a
-              href="https://prochess-lovat.vercel.app"
+              href="https://prochess-v2-ashen.vercel.app"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-ghost"
@@ -105,7 +105,7 @@ export default function Nav() {
           <MobileNavLink href="/courses" onClick={() => setOpen(false)}><BookOpen size={16} /> Courses</MobileNavLink>
           <MobileNavLink href="/players" onClick={() => setOpen(false)}><Users size={16} /> Players</MobileNavLink>
           <a
-            href="https://prochess-lovat.vercel.app"
+            href="https://prochess-v2-ashen.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
             style={{

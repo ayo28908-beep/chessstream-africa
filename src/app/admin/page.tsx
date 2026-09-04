@@ -20,30 +20,10 @@ interface TournamentConfig {
   streamLinks: StreamLink[];
 }
 
-const DEMO_TOURNAMENTS: TournamentConfig[] = [
-  {
-    id: "ncoq-2026",
-    name: "Nigeria Chess Olympiad Qualifiers 2026",
-    aiCommentary: true,
-    tiebreakSystem: "Buchholz",
-    streamLinks: [
-      { id: "s1", title: "Board 1 Commentary", url: "https://youtube.com/watch?v=...", platform: "YouTube", board: "Board 1", tournament: "ncoq-2026", active: true },
-      { id: "s2", title: "General Commentary", url: "https://twitch.tv/...", platform: "Twitch", board: "All boards", tournament: "ncoq-2026", active: true },
-    ],
-  },
-  {
-    id: "lagos-classic-2026",
-    name: "Lagos Chess Classic 2026",
-    aiCommentary: false,
-    tiebreakSystem: "Sonneborn-Berger",
-    streamLinks: [],
-  },
-];
-
 export default function AdminPage() {
-  const [tournaments, setTournaments] = useState(DEMO_TOURNAMENTS);
+  const [tournaments, setTournaments] = useState<{id: string; name: string; aiCommentary: boolean; tiebreakSystem: string; streamLinks: {id: string; title: string; url: string; platform: string; board: string; tournament: string; active: boolean}[]}[]>([]);
   const [newStream, setNewStream] = useState({ title: "", url: "", platform: "YouTube", board: "All boards" });
-  const [selectedTournament, setSelectedTournament] = useState(DEMO_TOURNAMENTS[0].id);
+  const [selectedTournament, setSelectedTournament] = useState("");
 
   const addStreamLink = () => {
     if (!newStream.title || !newStream.url) return;
@@ -123,7 +103,7 @@ export default function AdminPage() {
               fontWeight: 700,
               fontSize: 15,
             }}>
-              🎥 Live Streamer Links
+              Live Streamer Links
             </div>
 
             <div style={{ padding: "16px 20px" }}>
@@ -160,7 +140,7 @@ export default function AdminPage() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600 }}>{stream.title}</div>
                         <div style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
-                          📌 {stream.board}
+                          {stream.board}
                         </div>
                       </div>
                       <button
@@ -276,7 +256,7 @@ export default function AdminPage() {
               fontWeight: 700,
               fontSize: 15,
             }}>
-              ⚙️ Tournament Settings
+              Tournament Settings
             </div>
 
             <div style={{ padding: "16px 20px", display: "grid", gap: 16 }}>
