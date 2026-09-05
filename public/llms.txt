@@ -1,12 +1,15 @@
 # ChessStream Africa
 
-Live chess broadcasting platform for African tournaments and federations.
+Live chess broadcasting platform for African tournaments and federations. The broadcasting arm of Prochess Academy.
 
 ## Features
 - Real-time chess broadcasts from Lichess
-- Per-board chat and commentary
-- AI-powered move analysis
+- Per-board chat and commentary threads
+- Engine-evaluation based move commentary (per-tournament configurable)
+- Live standings with configurable tiebreak systems (Sonneborn-Berger, Buchholz, Direct Encounter, Most Wins)
+- Qualification scenario panels
 - Player search and head-to-head records
+- Admin-attached live stream links per board or tournament
 - Game analyzer with PGN import
 - Daily chess puzzles
 
@@ -15,10 +18,14 @@ Live chess broadcasting platform for African tournaments and federations.
 - Head-to-head: /api/search?q=NAME1+vs+NAME2
 - Broadcasts: /api/lichess/broadcasts
 - Round games: /api/lichess/round/ROUND_ID
+- Per-board chat: /api/chat/GAME_ID
+- Tournament config: /api/config?tournament=ID
+- Stream links: /api/streams?tournament=ID
+- FIDE stats: /api/fide/stats?id1=ID&id2=ID
 
 ## Links
 - Homepage: https://chessstream-africa.vercel.app
 - Broadcasts: https://chessstream-africa.vercel.app/broadcasts
 - Players: https://chessstream-africa.vercel.app/players
 - Analyze: https://chessstream-africa.vercel.app/analyze
-- Prochess Academy: https://prochess-lovat.vercel.app
+- Prochess Academy: https://prochess-v2-ashen.vercel.app

@@ -4,7 +4,8 @@ import { Zap, ExternalLink, Globe, Users, Tv } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "About ChessStream Africa — live chess broadcasting for African tournaments and federations.",
+  description: "About ChessStream Africa, the live chess broadcasting platform for African tournaments and federations.",
+  alternates: { canonical: "/about" },
   openGraph: {
     title: "About | ChessStream Africa",
     description: "Live chess broadcasting for African tournaments and federations.",
@@ -13,7 +14,12 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="wrap" style={{ padding: "32px 0" }}>
+    <div className="wrap" style={{ padding: "24px 0" }}>
+      <nav aria-label="Breadcrumb" style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 16, display: "flex", gap: 6 }}>
+        <Link href="/" style={{ color: "var(--color-text-muted)" }}>Home</Link>
+        <span>›</span>
+        <span style={{ color: "var(--color-text)" }}>About</span>
+      </nav>
       <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>About ChessStream Africa</h1>
       <p style={{ color: "var(--color-text-muted)", marginBottom: 32, fontSize: 16, maxWidth: 640 }}>
         The definitive platform for live chess broadcasting across Africa.
@@ -47,7 +53,7 @@ export default function AboutPage() {
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 16 }}>Our Mission</h2>
         <p style={{ color: "var(--color-text-muted)", fontSize: 16, lineHeight: 1.8, marginBottom: 16 }}>
           ChessStream Africa was created to give African chess tournaments the same level of broadcast quality 
-          that top-level events in Europe and Asia receive. Every move, every board, every player — live and accessible.
+          that top-level events in Europe and Asia receive. Every move, every board, every player, live and accessible.
         </p>
         <p style={{ color: "var(--color-text-muted)", fontSize: 16, lineHeight: 1.8 }}>
           We pull real-time game data from Lichess broadcasts and present it in a clean, modern interface. 

@@ -155,7 +155,7 @@ export default function FidePlayerDetail({ player, allPlayers }: { player: Playe
             color: "var(--color-eval-bad)",
             textAlign: "center",
           }}>
-            Career stats unavailable — FIDE endpoint unreachable. Showing rating only.
+            Career stats unavailable. The FIDE endpoint is unreachable, so only the rating is shown.
           </div>
         )}
         {careerStats && careerStats.total > 0 && (
@@ -238,7 +238,7 @@ export default function FidePlayerDetail({ player, allPlayers }: { player: Playe
           </div>
         ) : (
           <p style={{ color: "var(--color-text-muted)", fontSize: 13, textAlign: "center", padding: 20 }}>
-            No head-to-head records found — these players may not have played each other in rated games.
+            No head-to-head records found. These players may not have played each other in rated games.
           </p>
         )}
       </div>

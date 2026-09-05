@@ -1,20 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import BroadcastViewer from "@/components/BroadcastViewer";
-import StandingsPanel from "@/components/StandingsPanel";
-import StreamerPanel from "@/components/StreamerPanel";
+import BroadcastDetailClient from "@/components/BroadcastDetailClient";
 
-export function generateMetadata({ params }: { params: Promise<{ tournamentId: string }> }) {
-  // We need to handle this asynchronously for Next.js 15+
+export function generateMetadata({ params }: { params: Promise<{ tournamentId: string }> }): Metadata {
+  const tournamentId = "";
   return {
-    title: "Tournament",
-    description: "Live chess broadcast on ChessStream Africa",
+    title: "Tournament Broadcast",
+    description: "Live chess broadcast on ChessStream Africa with per-board commentary, standings, and analysis.",
+    alternates: { canonical: `/broadcasts/${tournamentId}` },
   };
 }
 
 export default async function BroadcastDetailPage({ params }: { params: Promise<{ tournamentId: string }> }) {
   const { tournamentId } = await params;
 
-  // In production, fetch tournament data from Lichess API
   const tournamentName = tournamentId
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -46,24 +45,7 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
-      {/* Main layout: boards + sidebar */}
-      <div className="wrap" style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 320px",
-        gap: 20,
-        alignItems: "start",
-      }}>
-        {/* Boards */}
-        <div>
-          <BroadcastViewer tournamentId={tournamentId} />
-        </div>
-
-        {/* Sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 72 }}>
-          <StreamerPanel />
-          <StandingsPanel />
-        </div>
-      </div>
+      <BroadcastDetailClient tournamentId={tournamentId} tournamentName={tournamentName} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Tv, Target, BookOpen, Users, Zap } from "lucide-react";
+import { Menu, X, Tv, Zap, Swords, Users, Radio } from "lucide-react";
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
@@ -41,36 +41,30 @@ export default function Nav() {
           </Link>
 
           {/* Desktop nav */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-          }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <NavLink href="/broadcasts"><Tv size={14} /> Broadcasts</NavLink>
             <NavLink href="/analyze"><Zap size={14} /> Analyze</NavLink>
-            <NavLink href="/puzzles"><Target size={14} /> Puzzles</NavLink>
-            <NavLink href="/courses"><BookOpen size={14} /> Courses</NavLink>
+            <NavLink href="/search"><Swords size={14} /> Head-to-Head</NavLink>
             <NavLink href="/players"><Users size={14} /> Players</NavLink>
-            <a
-              href="https://prochess-v2-ashen.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost"
+            <Link
+              href="/setup"
+              className="btn"
               style={{
                 padding: "6px 14px",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: 500,
+                fontWeight: 600,
                 color: "var(--color-accent)",
                 border: "1px solid var(--color-accent)",
                 marginLeft: 8,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                background: "transparent",
               }}
             >
-              Prochess Academy <span style={{ fontSize: 11 }}>↗</span>
-            </a>
+              <Radio size={14} /> Broadcast
+            </Link>
           </div>
 
           {/* Mobile hamburger */}
@@ -101,9 +95,9 @@ export default function Nav() {
         }}>
           <MobileNavLink href="/broadcasts" onClick={() => setOpen(false)}><Tv size={16} /> Broadcasts</MobileNavLink>
           <MobileNavLink href="/analyze" onClick={() => setOpen(false)}><Zap size={16} /> Analyzer</MobileNavLink>
-          <MobileNavLink href="/puzzles" onClick={() => setOpen(false)}><Target size={16} /> Puzzles</MobileNavLink>
-          <MobileNavLink href="/courses" onClick={() => setOpen(false)}><BookOpen size={16} /> Courses</MobileNavLink>
+          <MobileNavLink href="/search" onClick={() => setOpen(false)}><Swords size={16} /> Head-to-Head</MobileNavLink>
           <MobileNavLink href="/players" onClick={() => setOpen(false)}><Users size={16} /> Players</MobileNavLink>
+          <MobileNavLink href="/setup" onClick={() => setOpen(false)}><Radio size={16} /> Set Up a Broadcast</MobileNavLink>
           <a
             href="https://prochess-v2-ashen.vercel.app"
             target="_blank"

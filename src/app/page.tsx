@@ -3,6 +3,10 @@ import Link from "next/link";
 import BroadcastCard from "@/components/BroadcastCard";
 import FeaturesGrid from "@/components/FeaturesGrid";
 
+export const metadata = {
+  alternates: { canonical: "/" },
+};
+
 async function fetchBroadcastsFromProxy(): Promise<{ id: string; name: string; slug: string; tier?: number; location?: string; dates?: number[] }[]> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/lichess/broadcasts`, {
@@ -77,8 +81,8 @@ export default async function HomePage() {
             lineHeight: 1.6,
           }}>
             The definitive platform for live chess broadcasting across Africa.
-            Real-time boards, AI-powered commentary, per-game analysis, and
-            deep player data — built for federations, tournaments, and fans.
+            Real-time boards, engine-based move commentary, and
+            deep player data, built for federations, tournaments, and fans.
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -99,10 +103,10 @@ export default async function HomePage() {
             flexWrap: "wrap",
           }}>
             {[
-              { n: "1,693+", label: "Nigerian players" },
-              { n: "45+", label: "Countries tracked" },
               { n: "Live", label: "Real-time boards" },
-              { n: "Free", label: "For all" },
+              { n: "Free", label: "For federations" },
+              { n: "FIDE", label: "Player data" },
+              { n: "PGN", label: "Full game records" },
             ].map((s) => (
               <div key={s.label} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 28, fontWeight: 800, color: "var(--color-accent)" }}>{s.n}</div>
@@ -157,7 +161,7 @@ export default async function HomePage() {
               Why ChessStream Africa?
             </h2>
             <p style={{ color: "var(--color-text-muted)", maxWidth: 520, margin: "0 auto" }}>
-              Built for African chess — not a generic streaming platform with chess bolted on.
+              Built for African chess, not a generic streaming platform with chess bolted on.
             </p>
           </div>
           <FeaturesGrid />
@@ -178,12 +182,12 @@ export default async function HomePage() {
             </h2>
             <p style={{ color: "var(--color-text-muted)", maxWidth: 480, margin: "0 auto 28px", fontSize: 16 }}>
               ChessStream Africa is free for African chess federations and schools.
-              Get your events featured with live boards, commentary, and AI analysis.
+              Get your events featured with live boards, commentary, and engine analysis.
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <a href="mailto:hello@chessstream.africa" className="btn btn-primary" style={{ padding: "14px 28px", fontSize: 16 }}>
-                Get Started — It&apos;s Free
-              </a>
+              <Link href="/setup" className="btn btn-primary" style={{ padding: "14px 28px", fontSize: 16 }}>
+                Set Up Your Broadcast
+              </Link>
               <Link href="/about" className="btn btn-outline" style={{ padding: "14px 28px", fontSize: 16 }}>
                 Learn More
               </Link>

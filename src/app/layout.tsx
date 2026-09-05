@@ -2,21 +2,25 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
-import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/JsonLd";
+import { OrganizationJsonLd, WebsiteJsonLd, LocalBusinessJsonLd } from "@/components/JsonLd";
 
 const SITE_URL = "https://chessstream-africa.vercel.app";
 
 export const metadata: Metadata = {
   title: {
-    default: "ChessStream Africa — Live Chess Broadcasts",
+    default: "ChessStream Africa | Live Chess Broadcasts",
     template: "%s | ChessStream Africa",
   },
   description:
-    "Live chess broadcasting for African tournaments and federations. Real-time boards, per-game commentary, AI analysis, and player head-to-head data.",
+    "Live chess broadcasting for African tournaments and federations. Real-time boards, per-game commentary, engine analysis, and player head-to-head data.",
   keywords: ["chess", "africa", "live", "broadcast", "tournament", "fide", "lichess"],
   metadataBase: new URL(SITE_URL),
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
   openGraph: {
-    title: "ChessStream Africa — Live Chess Broadcasts",
+    title: "ChessStream Africa | Live Chess Broadcasts",
     description: "Live chess broadcasting for African tournaments and federations.",
     url: SITE_URL,
     siteName: "ChessStream Africa",
@@ -25,7 +29,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "ChessStream Africa",
+        alt: "ChessStream Africa: live chess broadcasting for Africa",
       },
     ],
     locale: "en_NG",
@@ -33,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ChessStream Africa — Live Chess Broadcasts",
+    title: "ChessStream Africa | Live Chess Broadcasts",
     description: "Live chess broadcasting for African tournaments and federations.",
     images: ["/og-image.png"],
   },
@@ -64,6 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ paddingTop: 56, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <OrganizationJsonLd />
         <WebsiteJsonLd />
+        <LocalBusinessJsonLd />
         <Nav />
         <main style={{ flex: 1 }}>{children}</main>
         <Footer />

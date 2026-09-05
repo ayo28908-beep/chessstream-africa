@@ -6,17 +6,17 @@ const features = [
   {
     icon: Tv,
     title: "Live Board Grid",
-    desc: "Watch every board in real-time with polling-based updates — no refresh needed.",
+    desc: "Watch every board in real-time with polling-based updates with no refresh needed.",
   },
   {
     icon: MessageSquare,
     title: "Per-Board Chat",
-    desc: "Discuss specific games with other viewers — not just tournament-wide chat.",
+    desc: "Discuss specific games with other viewers, not just tournament-wide chat.",
   },
   {
     icon: Brain,
     title: "AI Commentary",
-    desc: "AI-generated move analysis in real-time. Configurable per tournament.",
+    desc: "Engine-evaluation based move commentary in real time. Configurable per tournament.",
   },
   {
     icon: BarChart3,
@@ -41,7 +41,7 @@ const features = [
   {
     icon: Globe,
     title: "African Focus",
-    desc: "Built for African federations, schools, and tournaments — free for all.",
+    desc: "Built for African federations, schools, and tournaments, free for all.",
   },
 ];
 
