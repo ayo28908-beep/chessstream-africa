@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Tv, Zap, Swords, Users, Radio } from "lucide-react";
+import { Menu, X, Tv, Zap, Swords, Radio } from "lucide-react";
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
@@ -45,7 +45,6 @@ export default function Nav() {
             <NavLink href="/broadcasts"><Tv size={14} /> Broadcasts</NavLink>
             <NavLink href="/analyze"><Zap size={14} /> Analyze</NavLink>
             <NavLink href="/search"><Swords size={14} /> Head-to-Head</NavLink>
-            <NavLink href="/players"><Users size={14} /> Players</NavLink>
             <Link
               href="/setup"
               className="btn"
@@ -96,7 +95,6 @@ export default function Nav() {
           <MobileNavLink href="/broadcasts" onClick={() => setOpen(false)}><Tv size={16} /> Broadcasts</MobileNavLink>
           <MobileNavLink href="/analyze" onClick={() => setOpen(false)}><Zap size={16} /> Analyzer</MobileNavLink>
           <MobileNavLink href="/search" onClick={() => setOpen(false)}><Swords size={16} /> Head-to-Head</MobileNavLink>
-          <MobileNavLink href="/players" onClick={() => setOpen(false)}><Users size={16} /> Players</MobileNavLink>
           <MobileNavLink href="/setup" onClick={() => setOpen(false)}><Radio size={16} /> Set Up a Broadcast</MobileNavLink>
           <a
             href="https://prochess-v2-ashen.vercel.app"

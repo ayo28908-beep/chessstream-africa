@@ -38,7 +38,6 @@ interface H2HResponse {
 const SOURCES: { key: SourceKey; label: string; hint: string }[] = [
   { key: "lichess", label: "Lichess", hint: "Search every player on Lichess" },
   { key: "chesscom", label: "Chess.com", hint: "Enter a Chess.com username (no name search exists there)" },
-  { key: "fide", label: "FIDE", hint: "FIDE-rated players from the official rating list" },
 ];
 
 // ---------- Main component ----------
@@ -100,9 +99,7 @@ function SearchContent() {
       } else {
         setErrors((prev) => {
           const n: [string | null, string | null] = [...prev] as [string | null, string | null];
-          n[index] = source === "fide" && !data.indexLoaded
-            ? "No FIDE matches. The full FIDE list is not synced on this server yet."
-            : `No ${source} players found for "${term}".`;
+          n[index] = `No ${source} players found for "${term}".`;
           return n;
         });
         setResults((prev) => { const n: [PlayerHit[] | null, PlayerHit[] | null] = [...prev] as [PlayerHit[] | null, PlayerHit[] | null]; n[index] = null; return n; });
@@ -155,7 +152,7 @@ function SearchContent() {
         <Swords size={28} style={{ display: "inline", marginRight: 8, color: "var(--color-gold)" }} />Head-to-Head
       </h1>
       <p style={{ color: "var(--color-text-muted)", marginBottom: 28, fontSize: 15 }}>
-        Pick two players from Lichess, Chess.com or FIDE and compare their record.
+        Pick two players from Lichess or Chess.com and compare their record.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "start" }}>
@@ -261,7 +258,7 @@ function PlayerPicker({
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onSearch(index, tab, term); }}
-          placeholder={tab === "fide" ? "Player name or FIDE ID..." : tab === "chesscom" ? "Chess.com username..." : "Player name..."}
+          placeholder={tab === "chesscom" ? "Chess.com username..." : "Player name..."}
           style={{
             flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--color-border)",
             background: "var(--color-bg)", color: "var(--color-text)", fontSize: 14, outline: "none",
@@ -329,7 +326,6 @@ function HitRow({ hit, onPick }: { hit: PlayerHit; onPick: () => void }) {
         <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {hit.source === "lichess" && <>{(hit as LichessHit).title ? `${(hit as LichessHit).title} ` : ""}{(hit as LichessHit).username}</>}
           {hit.source === "chesscom" && <>{(hit as ChessComHit).title ? `${(hit as ChessComHit).title} ` : ""}{displayName(hit)}</>}
-          {hit.source === "fide" && <>{(hit as FideHit).title ? `${(hit as FideHit).title} ` : ""}{hit.name}</>}
         </div>
         <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
           {hit.source === "lichess" && (
@@ -337,9 +333,6 @@ function HitRow({ hit, onPick }: { hit: PlayerHit; onPick: () => void }) {
           )}
           {hit.source === "chesscom" && (
             <>{(hit as ChessComHit).country || "Chess.com"} {(hit as ChessComHit).followers ? `· ${(hit as ChessComHit).followers} followers` : ""}</>
-          )}
-          {hit.source === "fide" && (
-            <>{(hit as FideHit).federation || ""} {(hit as FideHit).standard ? `· Std ${(hit as FideHit).standard}` : ""} {(hit as FideHit).rapid ? `· Rpd ${(hit as FideHit).rapid}` : ""} {(hit as FideHit).blitz ? `· Blz ${(hit as FideHit).blitz}` : ""} · FIDE {(hit as FideHit).fideId}</>
           )}
         </div>
       </div>
@@ -403,28 +396,11 @@ function H2HPanel({ h2h }: { h2h: H2HResponse }) {
         )}
       </div>
 
-      {/* FIDE + Chess.com rows */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
-        <div className="card" style={{ padding: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>FIDE official record</h3>
-          {h2h.fide.stats ? (
-            <div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: "var(--color-gold)", fontFamily: "var(--font-mono)", marginBottom: 6 }}>
-                {h2h.fide.stats.wins} - {h2h.fide.stats.draws} - {h2h.fide.stats.losses}
-              </div>
-              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{h2h.fide.stats.totalGames} rated games from official FIDE records</div>
-            </div>
-          ) : (
-            <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-              {h2h.fide.error || "Add a FIDE identity for both players to compare official records."}
-            </div>
-          )}
-        </div>
-        <div className="card" style={{ padding: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Chess.com</h3>
-          <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-            {h2h.chesscom.note || "Chess.com does not expose head-to-head records publicly."}
-          </div>
+      {/* Chess.com note */}
+      <div className="card" style={{ padding: 20, marginTop: 16 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Chess.com</h3>
+        <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+          {h2h.chesscom.note || "Chess.com does not expose head-to-head records publicly."}
         </div>
       </div>
     </div>

@@ -14,7 +14,6 @@ export default function Footer() {
           </div>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             <Link href="/broadcasts" style={{ color: "var(--color-text-muted)" }}>Broadcasts</Link>
-            <Link href="/players" style={{ color: "var(--color-text-muted)" }}>Players</Link>
             <Link href="/schools" style={{ color: "var(--color-text-muted)" }}>Schools</Link>
             <Link href="/about" style={{ color: "var(--color-text-muted)" }}>About</Link>
             <Link

@@ -9,7 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/analyze", priority: 0.8 },
     { path: "/search", priority: 0.8 },
     { path: "/setup", priority: 0.8 },
-    { path: "/players", priority: 0.8 },
     { path: "/schools", priority: 0.7 },
     { path: "/about", priority: 0.7 },
     { path: "/privacy", priority: 0.4 },

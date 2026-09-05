@@ -26,6 +26,5 @@ Live chess broadcasting platform for African tournaments and federations. The br
 ## Links
 - Homepage: https://chessstream-africa.vercel.app
 - Broadcasts: https://chessstream-africa.vercel.app/broadcasts
-- Players: https://chessstream-africa.vercel.app/players
 - Analyze: https://chessstream-africa.vercel.app/analyze
 - Prochess Academy: https://prochess-v2-ashen.vercel.app
