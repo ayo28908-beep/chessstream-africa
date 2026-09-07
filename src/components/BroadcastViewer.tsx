@@ -87,6 +87,7 @@ export default function BroadcastViewer({
   const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [roundError, setRoundError] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [aiConfig, setAiConfig] = useState<AiConfig>(DEFAULT_AI);
   const [streams, setStreams] = useState<StreamLink[]>([]);
@@ -140,15 +141,28 @@ export default function BroadcastViewer({
     if (!roundId) return;
     try {
       const res = await fetch(`/api/lichess/round/${roundId}`);
-      if (!res.ok) throw new Error("Round fetch error");
+      if (!res.ok) {
+        let msg = `Lichess API returned ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData?.error) msg = errData.error;
+        } catch {
+          // non-JSON error body
+        }
+        console.error(`[ChessStream] Failed to load round ${roundId}: ${msg}`);
+        setRoundError(msg);
+        return;
+      }
       const data = await res.json();
+      setRoundError(null);
       if (data.games && data.games.length > 0) {
         setGames(data.games);
       } else {
         setGames([]);
       }
-    } catch {
-      // keep current data on transient failure
+    } catch (err) {
+      console.error(`[ChessStream] Network error fetching round ${roundId}:`, err);
+      setRoundError("Network error while fetching games from Lichess.");
     }
   }, []);
   // Load per-tournament config (AI commentary settings) and stream links
@@ -215,9 +229,12 @@ export default function BroadcastViewer({
     onGamesChange?.(games);
   }, [games, onGamesChange]);
 
-  // Poll for live updates every 15 seconds
+  // Poll for live updates every 15 seconds.
+  // NOTE: no id-prefix guard here — Lichess round ids are base64-ish and can
+  // start with any letter ("r" included), so filtering on a prefix silently
+  // killed live updates for a large fraction of real rounds.
   useEffect(() => {
-    if (!isLive || !activeRoundId || activeRoundId.startsWith("r")) return;
+    if (!isLive || !activeRoundId) return;
     const interval = setInterval(() => {
       fetchRoundGames(activeRoundId);
     }, 15000);
@@ -245,6 +262,11 @@ export default function BroadcastViewer({
         setLastUpdated(new Date(data.updatedAt || Date.now()).toLocaleTimeString());
         if (data.source === "lichess" && data.lichessRoundId) {
           setActiveRoundId(data.lichessRoundId);
+          // Lichess-linked session: refresh the round PGN each tick so moves
+          // uploaded to the broadcast appear here within a couple of seconds.
+          // (setActiveRoundId with the same value bails out of re-render, so
+          // this direct call is what keeps the boards live.)
+          fetchRoundGames(data.lichessRoundId);
         } else {
           setGames(data.games || []);
         }
@@ -482,6 +504,17 @@ export default function BroadcastViewer({
         </div>
       </div>
 
+      {/* Round fetch error (visible instead of a silent empty board list) */}
+      {roundError && (
+        <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.2)", fontSize: 13, color: "var(--color-eval-bad)", display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <span style={{ flexShrink: 0, fontWeight: 800 }}>!</span>
+          <span>
+            Could not load games from Lichess: {roundError}. The round link may point at a tournament page instead of a round,
+            the broadcast may be private, or Lichess may be rate-limiting. Retrying automatically.
+          </span>
+        </div>
+      )}
+
       {/* Board grid */}
       <div
         ref={gamesRef}
@@ -535,11 +568,13 @@ export default function BroadcastViewer({
       {/* Empty state */}
       {!loading && !error && games.length === 0 && (
         <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--color-text-muted)" }}>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>No games in this round</div>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>No games in this round yet</div>
           <div style={{ fontSize: 13 }}>
-            {allBroadcasts.length > 1
-              ? "Try selecting a different tournament or round from above"
-              : "Select a different round or check back later"}
+            {isCustom
+              ? "Waiting for moves from the broadcast. If this is a Lichess link, make sure the round has started and the broadcast is public."
+              : allBroadcasts.length > 1
+                ? "Try selecting a different tournament or round from above"
+                : "Select a different round or check back later"}
           </div>
         </div>
       )}

@@ -21,6 +21,7 @@ export async function GET(
     );
 
     if (!res.ok) {
+      console.error(`[ChessStream] Lichess round ${roundId} returned ${res.status}`);
       return NextResponse.json(
         { error: `Lichess API returned ${res.status}` },
         { status: 502 }
@@ -36,6 +37,7 @@ export async function GET(
       games,
     });
   } catch (err) {
+    console.error(`[ChessStream] Failed to fetch round ${roundId}:`, err);
     return NextResponse.json(
       { error: "Failed to fetch round data", detail: String(err) },
       { status: 500 }
