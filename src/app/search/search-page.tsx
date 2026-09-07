@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { Swords, X, ExternalLink, RefreshCw, ChevronRight } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Swords, X, ExternalLink, RefreshCw, ChevronRight, Play, ArrowRight } from "lucide-react";
 
 // ---------- Shared types ----------
 interface LichessHit {
@@ -30,7 +30,7 @@ interface SlotIdentities {
 interface H2HResponse {
   player1: { lichess?: string; chesscom?: string; fide?: number };
   player2: { lichess?: string; chesscom?: string; fide?: number };
-  lichess: { games: { white: string; black: string; result: string; url: string; date?: string; opening?: string }[]; error?: string };
+  lichess: { games: { white: string; black: string; result: string; url: string; date?: string; opening?: string; pgn?: string }[]; error?: string };
   fide: { stats: { totalGames: number; wins: number; draws: number; losses: number } | null; error?: string };
   chesscom: { supported: boolean; note: string };
 }
@@ -38,11 +38,13 @@ interface H2HResponse {
 const SOURCES: { key: SourceKey; label: string; hint: string }[] = [
   { key: "lichess", label: "Lichess", hint: "Search every player on Lichess" },
   { key: "chesscom", label: "Chess.com", hint: "Enter a Chess.com username (no name search exists there)" },
+  { key: "fide", label: "FIDE", hint: "Search FIDE-rated players, or type a FIDE ID directly below the results" },
 ];
 
 // ---------- Main component ----------
 function SearchContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const q = searchParams.get("q") || "";
 
   const [slots, setSlots] = useState<[SlotIdentities, SlotIdentities]>([{}, {}]);
@@ -222,6 +224,7 @@ function PlayerPicker({
   onRemove: (index: 0 | 1, source: SourceKey) => void;
 }) {
   const [tab, setTab] = useState<SourceKey>("lichess");
+  const [fideIdInput, setFideIdInput] = useState("");
 
   return (
     <div className="card" style={{ padding: 16 }}>
@@ -284,6 +287,46 @@ function PlayerPicker({
         </div>
       )}
 
+      {/* FIDE manual ID fallback (FIDE blocks automated search from servers) */}
+      {tab === "fide" && (
+        <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--color-bg-raised)", borderRadius: 8, border: "1px solid var(--color-border)" }}>
+          <div style={{ fontSize: 11.5, color: "var(--color-text-muted)", marginBottom: 6 }}>
+            FIDE&apos;s site blocks automated name search, so if a player is missing, add them by FIDE ID (find it on their ratings.fide.com profile page):
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              value={fideIdInput}
+              onChange={(e) => setFideIdInput(e.target.value.replace(/\D/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && /^\d{4,}$/.test(fideIdInput)) {
+                  const id = parseInt(fideIdInput);
+                  onPick(index, "fide", { source: "fide", fideId: id, name: `FIDE ${id}`, url: `https://ratings.fide.com/profile/${id}` });
+                }
+              }}
+              placeholder="FIDE ID, e.g. 1503014"
+              inputMode="numeric"
+              style={{
+                flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--color-border)",
+                background: "var(--color-bg)", color: "var(--color-text)", fontSize: 14, outline: "none", fontFamily: "var(--font-mono)",
+              }}
+            />
+            <button
+              onClick={() => {
+                if (/^\d{4,}$/.test(fideIdInput)) {
+                  const id = parseInt(fideIdInput);
+                  onPick(index, "fide", { source: "fide", fideId: id, name: `FIDE ${id}`, url: `https://ratings.fide.com/profile/${id}` });
+                }
+              }}
+              disabled={!/^\d{4,}$/.test(fideIdInput)}
+              className="btn btn-outline"
+              style={{ padding: "8px 12px", fontSize: 13 }}
+            >
+              Add by ID
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Chosen identities */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
         {SOURCES.map((s) => {
@@ -326,6 +369,7 @@ function HitRow({ hit, onPick }: { hit: PlayerHit; onPick: () => void }) {
         <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {hit.source === "lichess" && <>{(hit as LichessHit).title ? `${(hit as LichessHit).title} ` : ""}{(hit as LichessHit).username}</>}
           {hit.source === "chesscom" && <>{(hit as ChessComHit).title ? `${(hit as ChessComHit).title} ` : ""}{displayName(hit)}</>}
+          {hit.source === "fide" && <>{(hit as FideHit).title ? `${(hit as FideHit).title} ` : ""}{(hit as FideHit).name}</>}
         </div>
         <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
           {hit.source === "lichess" && (
@@ -333,6 +377,9 @@ function HitRow({ hit, onPick }: { hit: PlayerHit; onPick: () => void }) {
           )}
           {hit.source === "chesscom" && (
             <>{(hit as ChessComHit).country || "Chess.com"} {(hit as ChessComHit).followers ? `· ${(hit as ChessComHit).followers} followers` : ""}</>
+          )}
+          {hit.source === "fide" && (
+            <>{(hit as FideHit).federation || "FIDE"} · Std {fideRating("standard", hit as FideHit)} · Rapid {fideRating("rapid", hit as FideHit)} · Blitz {fideRating("blitz", hit as FideHit)}</>
           )}
         </div>
       </div>
@@ -346,8 +393,14 @@ function ratingOr(key: "rapid" | "blitz", hit: LichessHit): string {
   return v ? String(v) : "-";
 }
 
+function fideRating(key: "standard" | "rapid" | "blitz", hit: FideHit): string {
+  const v = hit[key];
+  return v ? String(v) : "-";
+}
+
 // ---------- H2H Panel ----------
 function H2HPanel({ h2h }: { h2h: H2HResponse }) {
+  const router = useRouter();
   const games = h2h.lichess.games || [];
   const bothLichess = Boolean(h2h.player1.lichess && h2h.player2.lichess);
   const p1Name = h2h.player1.lichess || h2h.player1.chesscom || String(h2h.player1.fide || "Player 1");
@@ -356,6 +409,23 @@ function H2HPanel({ h2h }: { h2h: H2HResponse }) {
   const p1Wins = games.filter((g) => (g.white === p1Name && g.result === "1-0") || (g.black === p1Name && g.result === "0-1")).length;
   const p2Wins = games.filter((g) => (g.white === p2Name && g.result === "1-0") || (g.black === p2Name && g.result === "0-1")).length;
   const draws = games.length - p1Wins - p2Wins;
+
+  // Send a game PGN to the analyzer via sessionStorage (PGNs can be long).
+  const importToAnalyzer = (pgn?: string) => {
+    if (!pgn) return;
+    try {
+      sessionStorage.setItem("cs-import-pgn", pgn);
+      router.push("/analyze?import=cs-import-pgn");
+    } catch {
+      // sessionStorage full or blocked — open a new tab with the PGN pasted
+      window.open(`/analyze`, "_blank");
+    }
+  };
+
+  const openPlayerGames = (source: "lichess" | "chesscom", player?: string) => {
+    if (!player) return;
+    router.push(`/analyze?tab=search&source=${source}&player=${encodeURIComponent(player)}`);
+  };
 
   return (
     <div style={{ marginTop: 32 }}>
@@ -374,18 +444,30 @@ function H2HPanel({ h2h }: { h2h: H2HResponse }) {
             <div style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 16 }}>{games.length} games found</div>
             <div style={{ display: "grid", gap: 8 }}>
               {games.map((g, i) => (
-                <a key={i} href={g.url} target="_blank" rel="noopener noreferrer" className="card board-card" style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", textDecoration: "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, minWidth: 0 }}>
+                <div key={i} className="card board-card" style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <a href={g.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, minWidth: 0, textDecoration: "none", color: "inherit", flex: 1 }}>
                     <span style={{ fontWeight: g.result === "1-0" ? 700 : 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.white}</span>
                     <span style={{ color: "var(--color-text-muted)", fontSize: 11 }}>vs</span>
                     <span style={{ fontWeight: g.result === "0-1" ? 700 : 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.black}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                  </a>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {g.date && <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{g.date}</span>}
                     <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 13 }}>{g.result}</span>
-                    <ExternalLink size={12} style={{ color: "var(--color-text-muted)" }} />
+                    {g.pgn && (
+                      <button
+                        onClick={() => importToAnalyzer(g.pgn)}
+                        className="btn btn-outline"
+                        style={{ padding: "5px 10px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}
+                        title="Open this game in the analyzer"
+                      >
+                        <Play size={11} /> Analyze
+                      </button>
+                    )}
+                    <a href={g.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-text-muted)", display: "inline-flex" }}>
+                      <ExternalLink size={12} />
+                    </a>
                   </div>
-                </a>
+                </div>
               ))}
             </div>
           </>
@@ -396,11 +478,62 @@ function H2HPanel({ h2h }: { h2h: H2HResponse }) {
         )}
       </div>
 
-      {/* Chess.com note */}
+      {/* FIDE record */}
+      <div className="card" style={{ padding: 20, marginTop: 16 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>FIDE record</h3>
+        {h2h.fide?.stats ? (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 12 }}>
+              {[
+                { label: "Games", value: h2h.fide.stats.totalGames },
+                { label: p1Name, value: h2h.fide.stats.wins },
+                { label: "Draws", value: h2h.fide.stats.draws },
+                { label: p2Name, value: h2h.fide.stats.losses },
+              ].map((s) => (
+                <div key={s.label} style={{ textAlign: "center", padding: "10px 6px", background: "var(--color-bg-raised)", borderRadius: 8 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "var(--color-gold)" }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: "var(--color-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--color-text-muted)" }}>
+              Official results from ratings.fide.com. Split by colour and time control is available via the FIDE profile links.
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+            {h2h.fide?.error || "Select a FIDE identity for both players (add them by FIDE ID if search misses them) to compare official FIDE results."}
+          </div>
+        )}
+      </div>
+
+      {/* Chess.com: no public H2H API, but import each player's games */}
       <div className="card" style={{ padding: 20, marginTop: 16 }}>
         <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Chess.com</h3>
-        <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-          {h2h.chesscom.note || "Chess.com does not expose head-to-head records publicly."}
+        <div style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 12 }}>
+          {h2h.chesscom.note || "Chess.com does not expose head-to-head records publicly. You can still import each player's recent games into the analyzer."}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {h2h.player1.chesscom && (
+            <button onClick={() => openPlayerGames("chesscom", h2h.player1.chesscom)} className="btn btn-outline" style={{ padding: "8px 14px", fontSize: 13 }}>
+              Import {p1Name}&apos;s games <ArrowRight size={13} />
+            </button>
+          )}
+          {h2h.player2.chesscom && (
+            <button onClick={() => openPlayerGames("chesscom", h2h.player2.chesscom)} className="btn btn-outline" style={{ padding: "8px 14px", fontSize: 13 }}>
+              Import {p2Name}&apos;s games <ArrowRight size={13} />
+            </button>
+          )}
+          {h2h.player1.lichess && h2h.player1.lichess !== p1Name && (
+            <button onClick={() => openPlayerGames("lichess", h2h.player1.lichess)} className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+              {p1Name}&apos;s Lichess games
+            </button>
+          )}
+          {h2h.player2.lichess && h2h.player2.lichess !== p2Name && (
+            <button onClick={() => openPlayerGames("lichess", h2h.player2.lichess)} className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+              {p2Name}&apos;s Lichess games
+            </button>
+          )}
         </div>
       </div>
     </div>

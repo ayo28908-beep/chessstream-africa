@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCustomBroadcast, listCustomBroadcasts } from "@/lib/customBroadcast";
 
-// POST /api/selfhost  body: { name, source, details, lichessRoundId? }
+// POST /api/selfhost  body: { name, source, details, lichessRoundId?, lichessSections? }
 // Creates a self-hosted broadcast session and returns its public id.
+//
+// Lichess source accepts either:
+//   - lichessRoundId: a single round (legacy) — "Main" section with one round
+//   - lichessSections: [{ label?, tournamentId?, roundIds? }, ...] — multiple
+//     linked tournaments (categories like U12/U16/U18, or Finals/Open) each
+//     with the full list of round ids to walk.
 export async function POST(req: NextRequest) {
   let body: {
     name?: string;
     source?: string;
     details?: Record<string, unknown>;
     lichessRoundId?: string;
+    lichessSections?: { label?: string; tournamentId?: string; rounds?: { id: string; label: string }[] }[];
   };
   try {
     body = (await req.json()) as typeof body;
@@ -17,46 +24,93 @@ export async function POST(req: NextRequest) {
   }
 
   const source = body.source === "lichess" ? "lichess" : body.source === "pasted-pgn" ? "pasted-pgn" : "local-pgn";
-  const lichessRoundId = typeof body.lichessRoundId === "string" ? body.lichessRoundId.trim() : undefined;
 
-  if (source === "lichess" && (!lichessRoundId || lichessRoundId.length < 5)) {
-    return NextResponse.json({ error: "A valid Lichess round id or broadcast URL is required for Lichess source" }, { status: 400 });
-  }
+  if (source === "lichess") {
+    const sections = Array.isArray(body.lichessSections) ? body.lichessSections.filter((s) => s && s.rounds?.length) : [];
+    const hasSections = sections.length > 0;
+    const hasLegacy = typeof body.lichessRoundId === "string" && body.lichessRoundId.trim().length >= 5;
 
-  // For Lichess-sourced broadcasts, verify the round id resolves before
-  // creating the session, so the user gets an actionable error instead of a
-  // silent empty viewer. The only round-level Lichess endpoint is the PGN one
-  // (there is no round JSON endpoint), so probe it with a HEAD-style GET.
-  // Only a hard 404 (round doesn't exist — often a tournament URL pasted by
-  // mistake) rejects; empty rounds (200, no games yet) and network hiccups
-  // don't block creation — the viewer polls and surfaces errors.
-  if (source === "lichess" && lichessRoundId) {
-    try {
-      const probe = await fetch(`https://lichess.org/api/broadcast/round/${lichessRoundId}.pgn`, {
-        headers: { Accept: "application/x-chess-pgn" },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (probe.status === 404) {
-        return NextResponse.json(
-          {
-            error:
-              "That URL does not point at a Lichess round. Open the round on Lichess (the page showing the list of boards) and copy its URL, or paste the round id itself. A tournament page link will not work.",
-          },
-          { status: 400 }
-        );
-      }
-    } catch (err) {
-      // Lichess unreachable or timed out — continue anyway; the viewer polls
-      // and will show a visible error if the round can't be loaded.
-      console.error("[ChessStream] Could not verify Lichess round (continuing):", lichessRoundId, err);
+    if (!hasSections && !hasLegacy) {
+      return NextResponse.json(
+        { error: "Link a Lichess broadcast round or tournament URL to continue" },
+        { status: 400 }
+      );
     }
+
+    // Validate every tournament/round id resolves before creating the session,
+    // so the user gets an actionable error instead of a silent empty viewer.
+    const idsToCheck: string[] = [];
+    if (hasSections) {
+      for (const s of sections) {
+        if (s.tournamentId) {
+          try {
+            const t = await fetch(`https://lichess.org/api/broadcast/${encodeURIComponent(s.tournamentId)}`, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(8000),
+            });
+            if (t.status === 404) {
+              return NextResponse.json(
+                {
+                  error: `The section "${s.label || "Main"}" does not point at a Lichess broadcast tournament. Open the tournament on Lichess (the page listing its rounds) and copy that URL.`,
+                },
+                { status: 400 }
+              );
+            }
+          } catch {
+            // Lichess unreachable — continue; the viewer polls and surfaces errors.
+          }
+        }
+        for (const r of s.rounds || []) idsToCheck.push(r.id);
+      }
+    } else if (hasLegacy) {
+      idsToCheck.push(body.lichessRoundId!.trim());
+    }
+
+    for (const roundId of idsToCheck) {
+      try {
+        const probe = await fetch(`https://lichess.org/api/broadcast/round/${roundId}.pgn`, {
+          headers: { Accept: "application/x-chess-pgn" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (probe.status === 404) {
+          return NextResponse.json(
+            {
+              error:
+                "One of those links does not point at a Lichess round. Open the round on Lichess (the page showing the list of boards) and copy its URL, or paste the round id itself. A tournament page link will not work for a round slot.",
+            },
+            { status: 400 }
+          );
+        }
+      } catch {
+        // network hiccup — the viewer will show a visible error if it persists
+      }
+    }
+
+    const session = createCustomBroadcast(
+      (body.name || "").trim(),
+      source,
+      body.details as never,
+      hasSections
+        ? { lichessSections: sections }
+        : { lichessRoundId: body.lichessRoundId!.trim() }
+    );
+
+    return NextResponse.json(
+      {
+        id: session.id,
+        name: session.name,
+        source: session.source,
+        sectionCount: session.sections.length,
+        url: `/broadcast/${session.id}`,
+      },
+      { status: 201 }
+    );
   }
 
   const session = createCustomBroadcast(
     (body.name || "").trim(),
     source,
-    body.details as never,
-    lichessRoundId
+    body.details as never
   );
 
   return NextResponse.json({

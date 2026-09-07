@@ -106,28 +106,43 @@ function buildFENFromPGN(movesSection: string): string {
 
 export function parsePGNtoGames(pgn: string): ParsedGame[] {
   const games: ParsedGame[] = [];
-  const chunks = pgn.split(/\n\n\n+/);
+  // A new game begins when a header line ("[...]") follows a blank line.
+  // Handles one or more blank lines between games and CRLF exports.
+  const chunks = pgn.replace(/\r\n?/g, "\n").split(/\n\n(?=\[)/);
 
   for (const chunk of chunks) {
     if (!chunk.trim()) continue;
 
+    // ---- Parse header block + move text -------------------------------
+    // Headers are the leading lines that start with "[". A single line can
+    // hold several header tags ([Event "X"][White "Y"]...), so scan each
+    // line with a global regex, not just the first match.
     const headers: Record<string, string> = {};
-    const headerLines = chunk.split("\n").filter((l) => l.startsWith("["));
-    for (const line of headerLines) {
-      const m = line.match(/\[(\w+)\s+"([^"]*)"\]/);
-      if (m) headers[m[1]] = m[2];
+    const lines = chunk.split("\n");
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i].trim();
+      if (!line.startsWith("[")) break;
+      const re = /\[(\w+)\s+"([^"]*)"\]/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(line)) !== null) headers[m[1]] = m[2];
+      i++;
     }
+    const movesSection = lines.slice(i).join("\n").trim();
 
-    if (!headers.Event && !headers.White) continue;
-
-    const movesStart = chunk.indexOf("\n", chunk.indexOf("["));
-    const movesSection = movesStart > 0 ? chunk.slice(movesStart).trim() : "";
+    if (!headers.Event && !headers.White && !headers.Black) continue;
 
     const { moves, evals, lastEval } = parseMovesAndEvals(movesSection);
     const fen = buildFENFromPGN(movesSection);
 
     let status = "in-progress";
-    const result = headers.Result || "*";
+    // Live DGT exports often omit the Result header but end the move text with
+    // the result token — pick that up so finished games show their outcome.
+    let result = headers.Result || "*";
+    if (result === "*") {
+      const tailResult = movesSection.match(/(?:\s|^)(1-0|0-1|1\/2-1\/2)\s*$/);
+      if (tailResult) result = tailResult[1];
+    }
     if (result === "1-0") status = "white-wins";
     else if (result === "0-1") status = "black-wins";
     else if (result === "1/2-1/2") status = "draw";

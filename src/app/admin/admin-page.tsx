@@ -340,7 +340,8 @@ export default function AdminPage() {
                     <option>YouTube</option><option>Twitch</option><option>Facebook</option><option>Other</option>
                   </select>
                   <select value={stream.board} onChange={(e) => setStream((p) => ({ ...p, board: e.target.value }))} style={{ ...selectStyle(), flex: 1 }}>
-                    <option>All boards</option><option>Board 1</option><option>Board 2</option><option>Board 3</option><option>Board 4</option>
+                    <option>All boards</option>
+                    {Array.from({ length: 16 }, (_, i) => <option key={i + 1}>Board {i + 1}</option>)}
                   </select>
                 </div>
                 <button onClick={addStream} className="btn btn-primary" style={{ justifyContent: "center" }}>

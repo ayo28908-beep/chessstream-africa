@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import BoardCard from "./BoardCard";
+import GameDetailModal, { type DetailGame } from "./GameDetailModal";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { AiFrequency, StreamLink } from "@/lib/tournamentConfig";
 
@@ -61,6 +62,15 @@ interface BroadcastSummary {
   roundCount?: number;
 }
 
+// Shape of a section returned by /api/selfhost/[id]
+interface SessionSection {
+  id: string;
+  label: string;
+  source: "lichess" | "local-pgn";
+  tournamentId?: string;
+  rounds: { id: string; label: string; games?: LiveGame[] }[];
+}
+
 interface AiConfig {
   enabled: boolean;
   threshold: number;
@@ -96,6 +106,18 @@ export default function BroadcastViewer({
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const isCustom = Boolean(customSessionId);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  // Custom (self-hosted) session state: sections = categories
+  const [sections, setSections] = useState<SessionSection[]>([]);
+  const [activeSectionId, setActiveSectionId] = useState<string>("");
+  // For local-PGN sections the round selector is keyed by label (no Lichess id).
+  const [activeRoundLabel, setActiveRoundLabel] = useState<string>("");
+  const activeRoundLabelRef = useRef(activeRoundLabel);
+  activeRoundLabelRef.current = activeRoundLabel;
+  // Selected game for the detail modal
+  const [selectedGame, setSelectedGame] = useState<DetailGame | null>(null);
+  const [selectedBoard, setSelectedBoard] = useState<number>(1);
+  const [selectedChatId, setSelectedChatId] = useState<string>("");
 
   const fetchBroadcasts = useCallback(async () => {
     try {
@@ -155,16 +177,13 @@ export default function BroadcastViewer({
       }
       const data = await res.json();
       setRoundError(null);
-      if (data.games && data.games.length > 0) {
-        setGames(data.games);
-      } else {
-        setGames([]);
-      }
+      setGames(data.games && data.games.length > 0 ? data.games : []);
     } catch (err) {
       console.error(`[ChessStream] Network error fetching round ${roundId}:`, err);
       setRoundError("Network error while fetching games from Lichess.");
     }
   }, []);
+
   // Load per-tournament config (AI commentary settings) and stream links
   const loadTournamentExtras = useCallback(async (id: string) => {
     try {
@@ -229,10 +248,7 @@ export default function BroadcastViewer({
     onGamesChange?.(games);
   }, [games, onGamesChange]);
 
-  // Poll for live updates every 15 seconds.
-  // NOTE: no id-prefix guard here — Lichess round ids are base64-ish and can
-  // start with any letter ("r" included), so filtering on a prefix silently
-  // killed live updates for a large fraction of real rounds.
+  // Poll for live updates every 15 seconds (imported Lichess broadcasts).
   useEffect(() => {
     if (!isLive || !activeRoundId) return;
     const interval = setInterval(() => {
@@ -241,8 +257,11 @@ export default function BroadcastViewer({
     return () => clearInterval(interval);
   }, [isLive, activeRoundId, fetchRoundGames]);
 
-  // Self-hosted broadcast: poll the session every 2 seconds (local PGN feeds
-  // upload new moves roughly once per second, so 2s keeps boards fresh).
+  // ---------- Custom (self-hosted) broadcast polling ----------
+  // Every 2 seconds: refresh the session. For Lichess-linked sections this
+  // ALSO re-fetches the round PGN so every linked round/board stays live
+  // (setActiveRoundId with the same value bails out of re-render, so the
+  // direct fetchRoundGames call is what keeps boards fresh).
   useEffect(() => {
     if (!customSessionId) return;
     let active = true;
@@ -260,15 +279,33 @@ export default function BroadcastViewer({
         setIsLive(true);
         setLoading(false);
         setLastUpdated(new Date(data.updatedAt || Date.now()).toLocaleTimeString());
-        if (data.source === "lichess" && data.lichessRoundId) {
-          setActiveRoundId(data.lichessRoundId);
-          // Lichess-linked session: refresh the round PGN each tick so moves
-          // uploaded to the broadcast appear here within a couple of seconds.
-          // (setActiveRoundId with the same value bails out of re-render, so
-          // this direct call is what keeps the boards live.)
-          fetchRoundGames(data.lichessRoundId);
+
+        const secs: SessionSection[] = data.sections || [];
+        // Legacy single-round sessions have no sections array.
+        if (secs.length === 0) {
+          if (data.lichessRoundId) {
+            setSections([{ id: "legacy", label: "Main", source: "lichess", rounds: [{ id: data.lichessRoundId, label: "Round 1" }] }]);
+          } else {
+            setSections([{ id: "legacy", label: "Main", source: "local-pgn", rounds: [{ id: "all", label: "All games", games: data.games || [] }] }]);
+          }
+          return;
+        }
+        setSections(secs);
+
+        const section = secs.find((s) => s.id === activeSectionId) || secs[0];
+        if (activeSectionId !== section.id) setActiveSectionId(section.id);
+
+        if (section.source === "lichess") {
+          const roundsInSection = section.rounds || [];
+          const round = roundsInSection.find((r) => r.id === activeRoundId) || roundsInSection[0];
+          if (round?.id) {
+            if (activeRoundId !== round.id) setActiveRoundId(round.id);
+            fetchRoundGames(round.id);
+          }
         } else {
-          setGames(data.games || []);
+          // Local PGN: games come in the session payload, filtered by round.
+          const round = (section.rounds || []).find((r) => r.label === activeRoundLabelRef.current) || (section.rounds || [])[0];
+          setGames(round?.games || []);
         }
       } catch {
         if (active) { setError("Unable to load this broadcast."); setLoading(false); }
@@ -277,17 +314,34 @@ export default function BroadcastViewer({
     load();
     const interval = setInterval(load, 2000);
     return () => { active = false; clearInterval(interval); };
-  }, [customSessionId]);
+  }, [customSessionId, activeSectionId, activeRoundId, fetchRoundGames]);
 
   const changeRound = useCallback(
     (dir: 1 | -1) => {
+      if (isCustom) {
+        const section = sections.find((s) => s.id === activeSectionId);
+        const rds = section?.rounds || [];
+        if (rds.length < 2) return;
+        if (section?.source === "lichess") {
+          const idx = rds.findIndex((r) => r.id === activeRoundId);
+          if (idx === -1) return;
+          const next = rds[(idx + dir + rds.length) % rds.length];
+          setActiveRoundId(next.id);
+        } else {
+          const idx = rds.findIndex((r) => r.label === activeRoundLabelRef.current);
+          if (idx === -1) return;
+          const next = rds[(idx + dir + rds.length) % rds.length];
+          setActiveRoundLabel(next.label);
+        }
+        return;
+      }
       if (rounds.length < 2) return;
       const idx = rounds.findIndex((r) => r.id === activeRoundId);
       if (idx === -1) return;
       const next = rounds[(idx + dir + rounds.length) % rounds.length];
       setActiveRoundId(next.id);
     },
-    [rounds, activeRoundId]
+    [rounds, activeRoundId, sections, activeSectionId, isCustom]
   );
 
   // Mobile swipe navigation:
@@ -321,7 +375,23 @@ export default function BroadcastViewer({
       }
     }
   };
-  const currentRound = rounds.find((r) => r.id === activeRoundId);
+
+  const activeSection = sections.find((s) => s.id === activeSectionId);
+
+  const openGame = (game: LiveGame, boardNumber: number, chatId: string) => {
+    setSelectedGame(game as DetailGame);
+    setSelectedBoard(boardNumber);
+    setSelectedChatId(chatId);
+  };
+
+  const roundTabs: LiveRound[] = isCustom
+    ? (activeSection?.rounds || []).map((r) => ({ id: r.id, name: r.label }))
+    : rounds;
+  const isRoundActive = (r: LiveRound) =>
+    isCustom && activeSection?.source === "local-pgn"
+      ? activeRoundLabel === r.name
+      : activeRoundId === r.id;
+  const currentRound = roundTabs.find(isRoundActive);
 
   return (
     <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -398,13 +468,11 @@ export default function BroadcastViewer({
       </>
       )}
 
-      {!isCustom && (
-      <>
       {/* Round selector with prev/next swipe buttons */}
       <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 12 }}>
         <button
           onClick={() => changeRound(-1)}
-          disabled={rounds.length < 2}
+          disabled={roundTabs.length < 2}
           className="btn btn-ghost"
           style={{ padding: "6px 8px", flexShrink: 0 }}
           aria-label="Previous round"
@@ -412,15 +480,18 @@ export default function BroadcastViewer({
           <ChevronLeft size={16} />
         </button>
         <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4, flex: 1 }}>
-          {rounds.map((r) => (
+          {roundTabs.map((r) => (
             <button
               key={r.id}
-              onClick={() => setActiveRoundId(r.id)}
+              onClick={() => {
+                if (isCustom && activeSection?.source === "local-pgn") setActiveRoundLabel(r.name);
+                else setActiveRoundId(r.id);
+              }}
               style={{
                 padding: "6px 14px", borderRadius: 6, border: "1px solid",
-                borderColor: activeRoundId === r.id ? "var(--color-accent)" : "var(--color-border)",
-                background: activeRoundId === r.id ? "var(--color-accent-muted)" : "transparent",
-                color: activeRoundId === r.id ? "var(--color-accent)" : "var(--color-text-muted)",
+                borderColor: isRoundActive(r) ? "var(--color-accent)" : "var(--color-border)",
+                background: isRoundActive(r) ? "var(--color-accent-muted)" : "transparent",
+                color: isRoundActive(r) ? "var(--color-accent)" : "var(--color-text-muted)",
                 fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
               }}
             >
@@ -432,7 +503,7 @@ export default function BroadcastViewer({
         </div>
         <button
           onClick={() => changeRound(1)}
-          disabled={rounds.length < 2}
+          disabled={roundTabs.length < 2}
           className="btn btn-ghost"
           style={{ padding: "6px 8px", flexShrink: 0 }}
           aria-label="Next round"
@@ -440,7 +511,30 @@ export default function BroadcastViewer({
           <ChevronRight size={16} />
         </button>
       </div>
-      </>
+
+      {/* Custom broadcast: category (section) switcher */}
+      {isCustom && sections.length > 1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: 0.5 }}>Category</span>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {sections.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => { setActiveSectionId(s.id); setHighlightIndex(null); }}
+                style={{
+                  padding: "6px 14px", borderRadius: 6, border: "1px solid",
+                  borderColor: activeSectionId === s.id ? "var(--color-gold)" : "var(--color-border)",
+                  background: activeSectionId === s.id ? "var(--color-gold-muted)" : "transparent",
+                  color: activeSectionId === s.id ? "var(--color-gold)" : "var(--color-text-muted)",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                {s.label}
+                {s.source === "lichess" && <span style={{ marginLeft: 4, fontSize: 10, opacity: 0.6 }}>L</span>}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {isCustom && (
@@ -448,6 +542,7 @@ export default function BroadcastViewer({
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-live)", animation: "pulse 1.5s ease-in-out infinite" }} />
             <b style={{ color: "var(--color-text)" }}>{broadcast?.name || "Live broadcast"}</b>
+            {activeSection && <span style={{ fontSize: 12 }}>· {activeSection.label}</span>}
             <span>{games.length} boards</span>
             {lastUpdated && <span>updated {lastUpdated}</span>}
           </span>
@@ -468,6 +563,11 @@ export default function BroadcastViewer({
                   <span style={{ color: "var(--color-live)", fontWeight: 600 }}>In progress</span>
                 </>
               )}
+            </>
+          )}
+          {!currentRound && games.length > 0 && (
+            <>
+              <span style={{ fontWeight: 600 }}>{games.length} boards</span>
             </>
           )}
           <span style={{ fontSize: 10, color: "var(--color-text-faint)", display: "none" }} className="swipe-hint">
@@ -525,24 +625,29 @@ export default function BroadcastViewer({
           touchAction: "pan-y",
         }}
       >
-        {games.map((game, i) => (
-          <div
-            key={game.id}
-            data-board={i}
-            style={{
-              outline: highlightIndex === i ? "2px solid var(--color-gold)" : "none",
-              borderRadius: 12,
-            }}
-          >
-            <BoardCard
-              game={game}
-              boardNumber={i + 1}
-              view={view}
-              aiConfig={aiConfig}
-              streams={streams}
-            />
-          </div>
-        ))}
+        {games.map((game, i) => {
+          const chatId = `${activeRoundId || activeSectionId || "g"}-${i}`;
+          return (
+            <div
+              key={`${game.id}-${i}`}
+              data-board={i}
+              style={{
+                outline: highlightIndex === i ? "2px solid var(--color-gold)" : "none",
+                borderRadius: 12,
+              }}
+            >
+              <BoardCard
+                game={game}
+                boardNumber={i + 1}
+                view={view}
+                aiConfig={aiConfig}
+                streams={streams}
+                onOpen={() => openGame(game, i + 1, chatId)}
+                chatId={chatId}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Loading state */}
@@ -577,6 +682,17 @@ export default function BroadcastViewer({
                 : "Select a different round or check back later"}
           </div>
         </div>
+      )}
+
+      {/* Game detail modal (click a board to open) */}
+      {selectedGame && (
+        <GameDetailModal
+          game={selectedGame}
+          boardNumber={selectedBoard}
+          chatId={selectedChatId}
+          streams={streams}
+          onClose={() => setSelectedGame(null)}
+        />
       )}
     </div>
   );

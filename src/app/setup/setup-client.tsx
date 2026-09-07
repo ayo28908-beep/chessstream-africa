@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Radio, Calendar, MapPin, Clock, Users, FileText, Link2, FolderOpen,
-  Check, AlertTriangle, ExternalLink, Play,
+  Check, AlertTriangle, ExternalLink, Play, Plus, X, Loader2, Layers,
 } from "lucide-react";
 
 const inputStyle: React.CSSProperties = {
@@ -17,16 +17,37 @@ const labelStyle: React.CSSProperties = {
 };
 
 // Minimal typing for the File System Access API (Chrome/Edge only).
-interface FileSystemFileHandle {
+interface FileSystemHandle {
+  kind: "file" | "directory";
+  name: string;
+}
+interface FileSystemFileHandle extends FileSystemHandle {
+  kind: "file";
   getFile: () => Promise<File>;
+}
+interface FileSystemDirectoryHandle extends FileSystemHandle {
+  kind: "directory";
+  entries: () => AsyncIterable<[string, FileSystemHandle]>;
 }
 declare global {
   interface Window {
     showOpenFilePicker?: (opts?: { types?: { description?: string; accept: Record<string, string[]> }[] }) => Promise<FileSystemFileHandle[]>;
+    showDirectoryPicker?: (opts?: { mode?: string }) => Promise<FileSystemDirectoryHandle>;
   }
 }
 
 type SourceMode = "local-pgn" | "lichess";
+
+interface PendingFile {
+  category: string;
+  round: string;
+  pgn: string;
+}
+interface UploadResult {
+  category: string;
+  round: string;
+  games: number;
+}
 
 export default function SetupClient() {
   const router = useRouter();
@@ -51,7 +72,7 @@ export default function SetupClient() {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ id: string; url: string } | null>(null);
 
-  // Local PGN watcher state
+  // ---------- Local PGN watcher state (single file) ----------
   const [fsaSupported] = useState(() => typeof window !== "undefined" && typeof window.showOpenFilePicker === "function");
   const [watchState, setWatchState] = useState<"idle" | "watching" | "error">("idle");
   const [watchFile, setWatchFile] = useState<string | null>(null);
@@ -63,7 +84,20 @@ export default function SetupClient() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastContentRef = useRef("");
 
-  const createSession = useCallback(async (src: SourceMode, lichessRoundId?: string) => {
+  // ---------- Folder upload state ----------
+  const [folderState, setFolderState] = useState<"idle" | "reading" | "uploading" | "done" | "error">("idle");
+  const [folderFiles, setFolderFiles] = useState<PendingFile[]>([]);
+  const [folderResults, setFolderResults] = useState<UploadResult[]>([]);
+  const [folderError, setFolderError] = useState<string | null>(null);
+
+  // ---------- Lichess multi-section state ----------
+  const [pendingTournament, setPendingTournament] = useState<{ id: string; name: string; rounds: { id: string; name: string }[] } | null>(null);
+  const [linkedSections, setLinkedSections] = useState<{ label: string; tournamentId?: string; rounds: { id: string; label: string }[] }[]>([]);
+  const [detecting, setDetecting] = useState(false);
+  const [sectionLabel, setSectionLabel] = useState("");
+  const [dirSupported] = useState(() => typeof window !== "undefined" && typeof window.showDirectoryPicker === "function");
+
+  const createSession = useCallback(async (src: SourceMode, lichessSections?: { label: string; tournamentId?: string; rounds: { id: string; label: string }[] }[]) => {
     setCreating(true);
     setError(null);
     try {
@@ -73,7 +107,7 @@ export default function SetupClient() {
         body: JSON.stringify({
           name,
           source: src,
-          lichessRoundId,
+          lichessSections: src === "lichess" ? lichessSections : undefined,
           details: {
             format, startDate, endDate, rounds, timeControl, venue, country, federation,
             sections, players, description,
@@ -93,25 +127,25 @@ export default function SetupClient() {
     }
   }, [name, format, startDate, endDate, rounds, timeControl, venue, country, federation, sections, players, description]);
 
-  const uploadPgn = useCallback(async (id: string, pgn: string) => {
+  const uploadPgn = useCallback(async (id: string, pgn: string, category?: string, round?: string) => {
     try {
       const res = await fetch(`/api/selfhost/${id}/pgn`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pgn }),
+        body: JSON.stringify({ pgn, category, round }),
       });
       const data = await res.json();
       if (res.ok) {
         setGameCount(data.gameCount);
         setLastUpload(new Date().toLocaleTimeString());
         setWatchError(null);
-        return true;
+        return { ok: true as const, gameCount: data.gameCount as number };
       }
       setWatchError(data.error || "Upload failed");
-      return false;
+      return { ok: false as const, error: data.error || "Upload failed" };
     } catch {
       setWatchError("Upload failed - check the connection");
-      return false;
+      return { ok: false as const, error: "Upload failed - check the connection" };
     }
   }, []);
 
@@ -168,22 +202,136 @@ export default function SetupClient() {
 
   useEffect(() => stopWatcher, [stopWatcher]);
 
+  // ---------- Folder upload ----------
+  const readFolder = useCallback(async (dirHandle: FileSystemDirectoryHandle, baseCategory: string, out: PendingFile[]) => {
+    for await (const [entryName, handle] of dirHandle.entries()) {
+      if (handle.kind === "file") {
+        if (!/\.(pgn|txt)$/i.test(entryName)) continue;
+        const file = await (handle as FileSystemFileHandle).getFile();
+        const text = await file.text();
+        if (text.trim().length < 20) continue;
+        out.push({
+          category: baseCategory || "Main",
+          round: entryName.replace(/\.(pgn|txt)$/i, ""),
+          pgn: text,
+        });
+      } else if (handle.kind === "directory") {
+        // A subfolder is a category (section): "U12", "U16", "Women"...
+        await readFolder(handle as FileSystemDirectoryHandle, baseCategory ? `${baseCategory} / ${entryName}` : entryName, out);
+      }
+    }
+  }, []);
+
+  const uploadFolder = useCallback(async (id: string) => {
+    if (!window.showDirectoryPicker) {
+      setFolderError("Folder upload needs Chrome or Edge. You can still upload single PGN files or paste PGN.");
+      return;
+    }
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+      setFolderState("reading");
+      setFolderError(null);
+      const files: PendingFile[] = [];
+      await readFolder(dirHandle, "", files);
+      if (files.length === 0) {
+        setFolderState("error");
+        setFolderError("No PGN files found in that folder. Put .pgn files in the folder (subfolders become categories like U12, U16).");
+        return;
+      }
+      setFolderFiles(files);
+      setFolderState("uploading");
+      setFolderResults([]);
+      const results: UploadResult[] = [];
+      let failures = 0;
+      for (const f of files) {
+        const res = await uploadPgn(id, f.pgn, f.category, f.round);
+        if (res.ok) results.push({ category: f.category, round: f.round, games: res.gameCount });
+        else failures++;
+      }
+      setFolderResults(results);
+      setFolderState(failures === 0 ? "done" : "done");
+      if (failures > 0) setFolderError(`${failures} file(s) failed to upload.`);
+    } catch (e) {
+      if ((e as Error).name === "AbortError") {
+        setFolderState("idle");
+        return;
+      }
+      setFolderState("error");
+      setFolderError("Could not read that folder. It may be locked by the DGT software.");
+    }
+  }, [readFolder, uploadPgn]);
+
+  // ---------- Lichess linking ----------
+  const detectLichessLink = useCallback(async () => {
+    const id = extractLichessId(lichessUrl);
+    if (!id) {
+      setError("That does not look like a Lichess broadcast URL or id. Paste a lichess.org/broadcast/... link (round or tournament) or a bare id.");
+      return;
+    }
+    setDetecting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/lichess/tournament/${encodeURIComponent(id)}`);
+      const data = await res.json();
+      if (res.ok && data.rounds && data.rounds.length > 0) {
+        // It's a tournament: remember it as a pending section with all rounds.
+        setPendingTournament({ id: data.tournament.id, name: data.tournament.name, rounds: data.rounds });
+        setSectionLabel(data.tournament.name);
+      } else if (res.status === 404) {
+        // Not a tournament — treat the id as a single round.
+        setPendingTournament({ id, name: "Round", rounds: [{ id, name: "Linked round" }] });
+        setSectionLabel("Main");
+      } else {
+        setError(data.error || "Could not reach Lichess to check that link. Try again in a moment.");
+      }
+    } catch {
+      setError("Could not reach Lichess to check that link. Try again in a moment.");
+    } finally {
+      setDetecting(false);
+    }
+  }, [lichessUrl]);
+
+  const addSectionFromPending = useCallback(() => {
+    if (!pendingTournament) return;
+    const rounds = pendingTournament.rounds.map((r) => ({ id: r.id, label: r.name }));
+    if (rounds.length === 0) return;
+    setLinkedSections((prev) => [
+      ...prev,
+      {
+        label: sectionLabel.trim() || pendingTournament.name,
+        tournamentId: pendingTournament.id,
+        rounds,
+      },
+    ]);
+    setPendingTournament(null);
+    setSectionLabel("");
+    setLichessUrl("");
+  }, [pendingTournament, sectionLabel]);
+
+  const removeSection = useCallback((index: number) => {
+    setLinkedSections((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updateSectionLabel = useCallback((index: number, label: string) => {
+    setLinkedSections((prev) => prev.map((s, i) => (i === index ? { ...s, label } : s)));
+  }, []);
+
   const createLocal = async () => {
     const id = await createSession("local-pgn");
     if (!id) return;
     if (pgnText.trim()) {
       lastContentRef.current = pgnText;
-      await uploadPgn(id, pgnText);
+      await uploadPgn(id, pgnText, "Main", "Round 1");
     }
   };
 
   const startLichess = async () => {
-    const roundId = extractRoundId(lichessUrl);
-    if (!roundId) {
-      setError("That does not look like a Lichess broadcast URL. Paste a lichess.org/broadcast/... link or a round id.");
+    if (linkedSections.length === 0) {
+      // Single quick link path: try detecting first, then require Add.
+      await detectLichessLink();
       return;
     }
-    await createSession("lichess", roundId);
+    await createSession("lichess", linkedSections);
   };
 
   const goLive = () => {
@@ -191,7 +339,7 @@ export default function SetupClient() {
   };
 
   const canCreateLocal = name.trim().length > 0;
-  const canCreateLichess = canCreateLocal && lichessUrl.trim().length > 0;
+  const canCreateLichess = canCreateLocal && linkedSections.length > 0;
 
   return (
     <div className="wrap" style={{ padding: "24px 0 60px", maxWidth: 880 }}>
@@ -199,7 +347,8 @@ export default function SetupClient() {
         <Radio size={26} style={{ display: "inline", marginRight: 8, color: "var(--color-accent)" }} />Set Up Your Broadcast
       </h1>
       <p style={{ color: "var(--color-text-muted)", marginBottom: 28, fontSize: 15 }}>
-        Broadcast your own tournament live. Two supported sources: a local PGN file from your DGT board, or a Lichess broadcast link. Importing an existing Lichess tournament from the <a href="/broadcasts" style={{ color: "var(--color-accent)" }}>broadcasts page</a> still works the same as before.
+        Broadcast your own tournament live. Two supported sources: a local PGN file or folder from your DGT board, or Lichess broadcast links.
+        Importing an existing Lichess tournament from the <a href="/broadcasts" style={{ color: "var(--color-accent)" }}>broadcasts page</a> still works the same as before.
       </p>
 
       <div style={{ display: "grid", gap: 20 }}>
@@ -265,7 +414,7 @@ export default function SetupClient() {
         {/* Data source */}
         <div className="card" style={{ padding: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Data source</h2>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
             <button
               onClick={() => setMode("local-pgn")}
               style={{
@@ -276,7 +425,7 @@ export default function SetupClient() {
                 fontSize: 14, fontWeight: 600, cursor: "pointer",
               }}
             >
-              <FileText size={14} style={{ display: "inline", marginRight: 6 }} />Local PGN file (DGT board)
+              <FileText size={14} style={{ display: "inline", marginRight: 6 }} />Local PGN (DGT board)
             </button>
             <button
               onClick={() => setMode("lichess")}
@@ -295,8 +444,9 @@ export default function SetupClient() {
           {mode === "local-pgn" && (
             <div style={{ display: "grid", gap: 14 }}>
               <div style={{ fontSize: 13.5, color: "var(--color-text-muted)", lineHeight: 1.6 }}>
-                Your DGT board writes live moves to a PGN file on your desktop. Create the broadcast below, then pick that
-                file. In Chrome or Edge, ChessStream watches the file and uploads new moves every second. Other browsers can paste the PGN below instead.
+                Your DGT board writes live moves to a PGN file on your desktop. Create the broadcast below, then either
+                pick the file to watch it live, or upload a whole <b>folder</b> — subfolders become categories (U12, U16,
+                Women...) and each PGN file becomes a round viewers can switch between.
               </div>
               <div>
                 <label style={labelStyle}>Paste PGN (optional, works in every browser)</label>
@@ -317,12 +467,42 @@ export default function SetupClient() {
                   <button onClick={stopWatcher} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: 12 }}>Stop</button>
                 </div>
               )}
+              {(folderState === "reading" || folderState === "uploading") && (
+                <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--color-accent-muted)", fontSize: 13.5, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+                  <span style={{ flex: 1 }}>
+                    {folderState === "reading" ? "Reading folder..." : `Uploading ${folderFiles.length} PGN files...`}
+                  </span>
+                </div>
+              )}
+              {folderResults.length > 0 && (
+                <div style={{ padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Layers size={14} style={{ color: "var(--color-accent)" }} /> Folder uploaded — {folderResults.length} files
+                  </div>
+                  <div style={{ display: "grid", gap: 4, maxHeight: 180, overflowY: "auto" }}>
+                    {folderResults.map((r, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, color: "var(--color-text-muted)" }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <b style={{ color: "var(--color-text)" }}>{r.category}</b> / {r.round}
+                        </span>
+                        <span style={{ fontFamily: "var(--font-mono)", flexShrink: 0 }}>{r.games} games</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {watchError && (
                 <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(218,54,51,0.08)", border: "1px solid rgba(218,54,51,0.2)", fontSize: 13, color: "var(--color-eval-bad)", display: "flex", alignItems: "center", gap: 8 }}>
                   <AlertTriangle size={14} /> {watchError}
                 </div>
               )}
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              {folderError && (
+                <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(218,54,51,0.08)", border: "1px solid rgba(218,54,51,0.2)", fontSize: 13, color: "var(--color-eval-bad)", display: "flex", alignItems: "center", gap: 8 }}>
+                  <AlertTriangle size={14} /> {folderError}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={createLocal} disabled={creating || !canCreateLocal} className="btn btn-primary" style={{ padding: "12px 24px" }}>
                   {creating ? "Creating..." : <><Play size={15} /> Create broadcast</>}
                 </button>
@@ -331,8 +511,13 @@ export default function SetupClient() {
                     <FolderOpen size={15} /> Watch PGN file
                   </button>
                 )}
-                {!fsaSupported && created && (
-                  <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Live file watching needs Chrome or Edge. You can still paste PGN above.</span>
+                {created && (
+                  <button onClick={() => uploadFolder(sessionIdRef.current || "")} disabled={!dirSupported} className="btn btn-outline" style={{ padding: "12px 24px" }}>
+                    <Layers size={15} /> Upload folder (categories)
+                  </button>
+                )}
+                {created && !fsaSupported && !dirSupported && (
+                  <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Live file watching and folder upload need Chrome or Edge. You can still paste PGN above.</span>
                 )}
               </div>
             </div>
@@ -341,22 +526,84 @@ export default function SetupClient() {
           {mode === "lichess" && (
             <div style={{ display: "grid", gap: 14 }}>
               <div style={{ fontSize: 13.5, color: "var(--color-text-muted)", lineHeight: 1.6 }}>
-                Link an existing Lichess broadcast (or the round page URL) and this site will render it with the full
-                ChessStream viewer: live boards, eval bars, commentary, standings, chat.
+                Link one Lichess broadcast — a <b>tournament</b> (all its rounds are watched) or a single <b>round</b> — then add more
+                sections for other categories (U12, U16, Women, Finals...). Each linked section becomes a category viewers can switch between.
               </div>
               <div>
-                <label style={labelStyle}>Lichess broadcast URL or round id</label>
-                <input
-                  value={lichessUrl}
-                  onChange={(e) => setLichessUrl(e.target.value)}
-                  placeholder="https://lichess.org/broadcast/-/-/yourroundid"
-                  style={inputStyle}
-                />
+                <label style={labelStyle}>Lichess broadcast URL or id (round or tournament)</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={lichessUrl}
+                    onChange={(e) => setLichessUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") detectLichessLink(); }}
+                    placeholder="https://lichess.org/broadcast/... or a round/tournament id"
+                    style={inputStyle}
+                  />
+                  <button onClick={detectLichessLink} disabled={detecting || !lichessUrl.trim()} className="btn btn-outline" style={{ padding: "0 16px", whiteSpace: "nowrap" }}>
+                    {detecting ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : "Detect"}
+                  </button>
+                </div>
               </div>
-              <div>
+
+              {pendingTournament && (
+                <div style={{ padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-accent)", background: "var(--color-accent-muted)", fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Check size={14} style={{ color: "var(--color-accent)" }} />
+                    {pendingTournament.rounds.length > 1
+                      ? <>Found tournament: <b>{pendingTournament.name}</b> ({pendingTournament.rounds.length} rounds)</>
+                      : <>Linked round: <b>{pendingTournament.name}</b></>}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+                    <input
+                      value={sectionLabel}
+                      onChange={(e) => setSectionLabel(e.target.value)}
+                      placeholder="Category label (e.g. U16, Finals, Open)"
+                      style={{ ...inputStyle, maxWidth: 280 }}
+                    />
+                    <button onClick={addSectionFromPending} className="btn btn-primary" style={{ padding: "8px 14px", fontSize: 13 }}>
+                      <Plus size={13} /> Add as section
+                    </button>
+                    <button onClick={() => { setPendingTournament(null); setSectionLabel(""); }} className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 12 }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {linkedSections.length > 0 && (
+                <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-muted)" }}>
+                    Linked sections ({linkedSections.length}) — viewers switch between these categories
+                  </div>
+                  {linkedSections.map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 13 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-accent)", flexShrink: 0 }} />
+                      <input
+                        value={s.label}
+                        onChange={(e) => updateSectionLabel(i, e.target.value)}
+                        style={{ ...inputStyle, maxWidth: 200, padding: "6px 10px" }}
+                        title="Category label"
+                      />
+                      <span style={{ color: "var(--color-text-muted)", fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {s.tournamentId ? `${s.tournamentId} · ` : ""}{s.rounds.length} round{s.rounds.length > 1 ? "s" : ""}
+                      </span>
+                      <button onClick={() => removeSection(i)} style={{ background: "none", border: "none", color: "var(--color-text-faint)", cursor: "pointer", padding: 4 }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={startLichess} disabled={creating || !canCreateLichess} className="btn btn-primary" style={{ padding: "12px 24px" }}>
-                  {creating ? "Creating..." : <><Link2 size={15} /> Link and create broadcast</>}
+                  {creating ? "Creating..." : <><Link2 size={15} /> {linkedSections.length === 0 ? "Detect link first" : "Link sections and create broadcast"}</>}
                 </button>
+                {linkedSections.length === 0 && (
+                  <span style={{ fontSize: 12.5, color: "var(--color-text-muted)" }}>
+                    Paste a tournament or round link above, click <b>Detect</b>, then <b>Add as section</b>.
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -394,23 +641,24 @@ export default function SetupClient() {
           <span style={{ display: "flex", alignItems: "center", gap: 5 }}><MapPin size={13} /> Venue</span>
           <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Clock size={13} /> Time control</span>
           <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Users size={13} /> Player list</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Layers size={13} /> Categories & rounds</span>
         </div>
       </div>
     </div>
   );
 }
 
-// Pull a Lichess round id out of a broadcast URL, or accept a bare round id.
-function extractRoundId(input: string): string | null {
+// Pull a Lichess id out of a broadcast URL (tournament or round), or accept a bare id.
+function extractLichessId(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
-  if (/^[a-zA-Z0-9]{5,}$/.test(trimmed)) return trimmed;
+  if (/^[a-zA-Z0-9]{4,}$/.test(trimmed)) return trimmed;
   try {
     const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
     if (!url.hostname.includes("lichess")) return null;
     const parts = url.pathname.split("/").filter(Boolean);
     for (let i = parts.length - 1; i >= 0; i--) {
-      if (/^[a-zA-Z0-9]{5,}$/.test(parts[i])) return parts[i];
+      if (/^[a-zA-Z0-9]{4,}$/.test(parts[i])) return parts[i];
     }
     return null;
   } catch {

@@ -37,7 +37,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", marginBottom: 6 }}>Contact</h2>
-          <p>Questions about this policy can be sent to <a href="mailto:hello@chessstream.africa" style={{ color: "var(--color-accent)" }}>hello@chessstream.africa</a>.</p>
+          <p>Questions about this policy can be sent to <a href="mailto:processincng@gmail.com" style={{ color: "var(--color-accent)" }}>processincng@gmail.com</a>.</p>
         </section>
       </div>
     </div>

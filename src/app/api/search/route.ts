@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
   const p2 = body.player2 || {};
 
   // ---- Lichess head-to-head (games where they faced each other) ----
-  let lichessGames: { white: string; black: string; result: string; url: string; date?: string; opening?: string }[] = [];
+  let lichessGames: { white: string; black: string; result: string; url: string; date?: string; opening?: string; pgn?: string }[] = [];
   let lichessError: string | undefined;
   if (p1.lichess && p2.lichess) {
     try {
@@ -200,6 +200,7 @@ export async function POST(req: NextRequest) {
               url: `https://lichess.org/${g.id}`,
               date: g.createdAt ? new Date(g.createdAt).toISOString().slice(0, 10) : undefined,
               opening: g.opening?.name,
+              pgn: typeof g.pgn === "string" ? g.pgn : undefined,
             });
           } catch {
             // skip malformed line

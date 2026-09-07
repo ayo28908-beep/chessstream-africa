@@ -39,12 +39,16 @@ export default function BoardCard({
   view,
   aiConfig,
   streams,
+  onOpen,
+  chatId,
 }: {
   game: Game;
   boardNumber: number;
   view: "grid" | "list";
   aiConfig?: { enabled: boolean; threshold: number; frequency: AiFrequency };
   streams?: StreamLink[];
+  onOpen?: () => void;
+  chatId?: string;
 }) {
   const [showChat, setShowChat] = useState(false);
 
@@ -74,6 +78,11 @@ export default function BoardCard({
 
           {/* Chessboard from FEN */}
           <div
+            onClick={onOpen}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open game on board ${boardNumber}`}
+            onKeyDown={(e) => { if (e.key === "Enter" && onOpen) onOpen(); }}
             style={{
               flex: 1,
               aspectRatio: "1",
@@ -84,6 +93,8 @@ export default function BoardCard({
               gridTemplateRows: "repeat(8, 1fr)",
               borderRight: "1px solid var(--color-border)",
               position: "relative",
+              cursor: onOpen ? "pointer" : "default",
+              outline: "none",
             }}
           >
             {renderBoardFromFEN(game.fen)}
@@ -166,12 +177,13 @@ export default function BoardCard({
             <button onClick={() => setShowChat(!showChat)} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px", flex: 1 }}>
               Chat
             </button>
-            {game.pgnUrl ? (
-              <a href={game.pgnUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px", flex: 1, textAlign: "center", textDecoration: "none" }}>
-                Lichess <ExternalLink size={11} />
-              </a>
-            ) : (
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px", flex: 1 }}>
+            {game.pgnUrl && onOpen && (
+              <button onClick={onOpen} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px", flex: 1 }}>
+                Analysis <ExternalLink size={11} />
+              </button>
+            )}
+            {!game.pgnUrl && onOpen && (
+              <button onClick={onOpen} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px", flex: 1 }}>
                 Analysis
               </button>
             )}
@@ -207,7 +219,7 @@ export default function BoardCard({
       )}
 
       {/* Per-board chat */}
-      {showChat && <BoardChat gameId={game.id} onClose={() => setShowChat(false)} />}
+      {showChat && <BoardChat gameId={chatId || game.id} onClose={() => setShowChat(false)} />}
     </div>
   );
 }

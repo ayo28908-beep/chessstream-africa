@@ -33,7 +33,7 @@ export function OrganizationJsonLd() {
         contactPoint: {
           "@type": "ContactPoint",
           contactType: "customer service",
-          email: "hello@chessstream.africa",
+          email: "processincng@gmail.com",
         },
       }}
     />
@@ -74,7 +74,7 @@ export function LocalBusinessJsonLd() {
           addressCountry: "NG",
         },
         telephone: "+2348081635986",
-        email: "hello@chessstream.africa",
+        email: "processincng@gmail.com",
         sameAs: [
           "https://prochess-v2-ashen.vercel.app",
         ],

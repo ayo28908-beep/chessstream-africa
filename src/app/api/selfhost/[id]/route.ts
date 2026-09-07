@@ -17,6 +17,7 @@ export async function GET(
     name: session.name,
     source: session.source,
     lichessRoundId: session.lichessRoundId,
+    sections: session.sections,
     details: session.details,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Chess } from "chess.js";
+import { Chess, type Square } from "chess.js";
+import { normalizeUciCastle } from "@/lib/utils";
 import {
   Upload, Play, ArrowLeft, ArrowRight, RotateCcw, Zap, Search, FileText,
-  ExternalLink, Loader2, AlertTriangle,
+  ExternalLink, Loader2, AlertTriangle, RefreshCcw,
 } from "lucide-react";
 
 const Chessboard = dynamic(() => import("@/components/lazy-chessboard").then((m) => m.default), { ssr: false });
@@ -25,12 +26,6 @@ interface EngineLine {
   evalMate?: number;
 }
 
-interface CloudEvalData {
-  depth: number;
-  knodes: number;
-  lines: EngineLine[];
-}
-
 interface PastGame {
   id: string;
   white: string;
@@ -42,13 +37,83 @@ interface PastGame {
   pgn?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Robust PGN loading
+//
+// chess.js's loadPgn is strict: it throws on multi-game files (a whole round
+// exported from Lichess/DGT), inline [%eval]/[%clk] tags in odd positions, and
+// some comment/variation shapes. Lichess accepts all of those. So we:
+//   1. split multi-game PGNs and load the first game (reporting the count),
+//   2. retry with comments/NAGs/variations stripped if the strict parse fails,
+//   3. fall back to a move-by-move parse that skips anything illegal.
+// ---------------------------------------------------------------------------
+
+function splitPGNGames(pgn: string): string[] {
+  const norm = pgn.replace(/\r\n?/g, "\n");
+  const headerStart = /(^|\n\n)\[[A-Za-z]+\s+"/g;
+  const positions: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = headerStart.exec(norm)) !== null) positions.push(m.index);
+  if (positions.length <= 1) return [norm.trim()];
+  const games: string[] = [];
+  for (let i = 0; i < positions.length; i++) {
+    const g = norm.slice(positions[i], positions[i + 1] ?? undefined).trim();
+    if (g) games.push(g);
+  }
+  return games;
+}
+
+function sanitizePGNForChessJs(pgn: string): string {
+  let s = pgn;
+  s = s.replace(/\{[^}]*\}/g, ""); // comments (and [%clk]/[%eval] inside them)
+  s = s.replace(/\$[0-9]+/g, ""); // NAGs
+  let prev: string;
+  do { prev = s; s = s.replace(/\([^()]*\)/g, ""); } while (s !== prev); // nested variations
+  s = s.replace(/\[%[a-z]+\s+[^\]]*\]/gi, ""); // stray inline tags
+  return s;
+}
+
+function parseMovesManually(pgn: string): string[] {
+  const chess = new Chess();
+  const moves: string[] = [];
+  const tokens = pgn
+    .replace(/\r\n?/g, "\n")
+    .replace(/\{[^}]*\}/g, "")
+    .replace(/\$[0-9]+/g, "")
+    .replace(/\([^()]*\)/g, "")
+    .replace(/[0-9]+\.\.\./g, "")
+    .split(/\s+/);
+  for (const tok of tokens) {
+    if (!tok) continue;
+    if (/^[0-9]+\.$/.test(tok)) continue;
+    if (["1-0", "0-1", "1/2-1/2", "*"].includes(tok)) continue;
+    if (tok.startsWith("[") || tok.startsWith("\"")) continue;
+    if (tok.length > 10) continue;
+    try {
+      const mv = chess.move(tok);
+      moves.push(mv.san);
+    } catch {
+      // illegal/unknown token — skip it (e.g. variation leftovers)
+    }
+  }
+  return moves;
+}
+
 export default function AnalyzePage() {
   const [tab, setTab] = useState<"analyze" | "search">("analyze");
   const [pgnText, setPgnText] = useState("");
-  const [chess, setChess] = useState<Chess | null>(null);
+  // Always start with a playable position (even with no game loaded) so
+  // visitors can play moves by hand from the empty board immediately.
+  const [chess, setChess] = useState<Chess | null>(() => new Chess());
   const [moveIndex, setMoveIndex] = useState(-1);
   const [moves, setMoves] = useState<string[]>([]);
   const [gameMeta, setGameMeta] = useState<{ white: string; black: string; event?: string; result?: string } | null>(null);
+  const [importNote, setImportNote] = useState<string | null>(null);
+
+  // Manual move entry
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [boardFlipped, setBoardFlipped] = useState(false);
+  const [manualInput, setManualInput] = useState("");
 
   // Engine analysis
   const [engine, setEngine] = useState<{ fen: string; evalCp?: number; evalMate?: number; depth: number; lines: EngineLine[] } | null>(null);
@@ -57,11 +122,19 @@ export default function AnalyzePage() {
   const evalRequestRef = useRef(0);
 
   const loadPgn = useCallback((pgn: string) => {
+    const games = splitPGNGames(pgn);
+    const target = games[0] || pgn;
+    if (games.length > 1) {
+      setImportNote(`${games.length} games found in this file — showing the first one. (For a whole tournament, use the Broadcast setup flow instead.)`);
+    } else {
+      setImportNote(null);
+    }
     try {
       const c = new Chess();
-      c.loadPgn(pgn);
+      c.loadPgn(target);
       const history = c.history();
       const headers = c.header();
+      if (history.length === 0) throw new Error("No moves found");
       setMoves(history);
       setMoveIndex(-1);
       setChess(new Chess());
@@ -74,9 +147,45 @@ export default function AnalyzePage() {
       });
       setEngine(null);
       setEngineError(null);
+      setSelectedSquare(null);
       return true;
     } catch {
-      return false;
+      // Strict parse failed — try a sanitized parse.
+      try {
+        const c = new Chess();
+        c.loadPgn(sanitizePGNForChessJs(target));
+        const history = c.history();
+        const headers = c.header();
+        if (history.length === 0) throw new Error("No moves found");
+        setMoves(history);
+        setMoveIndex(-1);
+        setChess(new Chess());
+        setPgnText(pgn);
+        setGameMeta({
+          white: headers.White || "White",
+          black: headers.Black || "Black",
+          event: headers.Event ?? undefined,
+          result: headers.Result ?? undefined,
+        });
+        setEngine(null);
+        setEngineError(null);
+        setSelectedSquare(null);
+        return true;
+      } catch {
+        // Last resort: move-by-move tolerant parse.
+        const manual = parseMovesManually(target);
+        if (manual.length === 0) return false;
+        setMoves(manual);
+        setMoveIndex(-1);
+        setChess(new Chess());
+        setPgnText(pgn);
+        setGameMeta(null);
+        setImportNote("Loaded the move list from a file that chess.js could not fully parse — comments and annotations were skipped.");
+        setEngine(null);
+        setEngineError(null);
+        setSelectedSquare(null);
+        return true;
+      }
     }
   }, []);
 
@@ -87,11 +196,79 @@ export default function AnalyzePage() {
       for (let i = 0; i <= index; i++) newChess.move(moves[i]);
       setChess(newChess);
       setMoveIndex(index);
+      setSelectedSquare(null);
     },
     [chess, moves]
   );
 
-  // Fetch engine analysis whenever the position changes
+  // Play a manual move (drag or click-to-move). Branches from the current
+  // position: moves after the current one are truncated, then the new move is
+  // appended. Returns true when the move was legal and played.
+  const playMove = useCallback(
+    (from: string, to: string, promotion?: string): boolean => {
+      if (!chess) return false;
+      try {
+        const mv = chess.move({ from, to, promotion });
+        setMoves((prev) => {
+          const base = moveIndex >= prev.length - 1 ? [...prev] : prev.slice(0, moveIndex + 1);
+          const next = [...base, mv.san];
+          setMoveIndex(next.length - 1);
+          return next;
+        });
+        // Clone the instance so React re-renders and the engine effect re-runs.
+        setChess(new Chess(chess.fen()));
+        setSelectedSquare(null);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [chess, moveIndex]
+  );
+
+  const resetBoard = useCallback(() => {
+    setChess(new Chess());
+    setMoves([]);
+    setMoveIndex(-1);
+    setGameMeta(null);
+    setEngine(null);
+    setEngineError(null);
+    setSelectedSquare(null);
+    setImportNote(null);
+  }, []);
+
+  // Play a move from text — accepts both SAN ("e4", "Nf3", "O-O") and UCI
+  // ("e2e4", "e7e8q"). This is the reliable way to enter moves by hand; drag
+  // and click-to-move on the board are also wired up as conveniences.
+  const playSan = useCallback((text: string): boolean => {
+    if (!chess) return false;
+    const t = text.trim();
+    if (!t) return false;
+    if (/^[a-h][1-8][a-h][1-8]([qrbn])?$/i.test(t)) {
+      const from = t.slice(0, 2);
+      const to = t.slice(2, 4);
+      const promo = t.length > 4 ? t[4].toLowerCase() : undefined;
+      return playMove(from, to, promo);
+    }
+    try {
+      const mv = chess.move(t);
+      setMoves((prev) => {
+        const base = moveIndex >= prev.length - 1 ? [...prev] : prev.slice(0, moveIndex + 1);
+        const next = [...base, mv.san];
+        setMoveIndex(next.length - 1);
+        return next;
+      });
+      setChess(new Chess(chess.fen()));
+      setSelectedSquare(null);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [chess, moveIndex, playMove]);
+
+  // Fetch engine analysis whenever the position changes. The last known eval
+  // is kept (never wiped to zero) — a missing cloud record just shows the
+  // "no data" note while the previous score stays visible, marked stale.
   useEffect(() => {
     if (!chess) return;
     const fen = chess.fen();
@@ -103,35 +280,46 @@ export default function AnalyzePage() {
         const res = await fetch(`/api/lichess/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=3`);
         if (reqId !== evalRequestRef.current) return; // stale response
         if (!res.ok) {
-          setEngine(null);
-          setEngineError("Engine data not available for this position (Lichess cloud eval has no record of it).");
+          setEngineError("Engine data not available for this exact position. Showing the last known eval.");
           return;
         }
         const data = await res.json();
         if (reqId !== evalRequestRef.current) return;
-        const lines: EngineLine[] = (data.pvs || []).map((pv: { moves: string; cp?: number; mate?: number }) => ({
+        if (!data.pvs || data.pvs.length === 0) {
+          setEngineError("Engine data not available for this exact position. Showing the last known eval.");
+          return;
+        }
+        const lines: EngineLine[] = data.pvs.map((pv: { moves: string; cp?: number; mate?: number }) => ({
           san: pvToSan(fen, pv.moves),
           evalCp: pv.cp,
           evalMate: pv.mate,
         }));
-        const top = data.pvs?.[0] || {};
-        setEngine({
-          fen,
-          evalCp: top.cp,
-          evalMate: top.mate,
-          depth: data.depth || 0,
-          lines,
-        });
+        const top = data.pvs[0] || {};
+        setEngine({ fen, evalCp: top.cp, evalMate: top.mate, depth: data.depth || 0, lines });
+        setEngineError(null);
       } catch {
         if (reqId === evalRequestRef.current) {
-          setEngine(null);
-          setEngineError("Could not reach the analysis engine.");
+          setEngineError("Could not reach the analysis engine. Showing the last known eval.");
         }
       } finally {
         if (reqId === evalRequestRef.current) setEngineLoading(false);
       }
     })();
   }, [chess]);
+
+  // Engine value to display: always the last known score, dimmed when stale.
+  const engineStale = Boolean(engine && chess && engine.fen !== chess.fen());
+  const displayEval = engine?.evalMate !== undefined && engine.evalMate !== 0
+    ? (engine.evalMate > 0 ? 999 : -999)
+    : engine?.evalCp;
+  const evalText =
+    engine?.evalMate !== undefined && engine.evalMate !== 0
+      ? `${engine.evalMate > 0 ? "+" : "-"}M${Math.abs(engine.evalMate)}`
+      : typeof displayEval === "number"
+        ? `${displayEval >= 0 ? "+" : ""}${(displayEval / 100).toFixed(1)}`
+        : "";
+  const whitePct = typeof displayEval === "number" ? Math.round(50 + 50 * Math.tanh(displayEval / 400)) : 50;
+  const clamped = Math.min(96, Math.max(4, whitePct));
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -152,13 +340,36 @@ export default function AnalyzePage() {
   const [searchMessage, setSearchMessage] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const runGameSearch = async () => {
-    if (!searchPlayer.trim()) return;
+  // Support deep links from the head-to-head page (import a PGN stored in
+  // sessionStorage, or open the search tab pre-filled for a player).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const importKey = params.get("import");
+    if (importKey) {
+      const stored = sessionStorage.getItem(importKey);
+      if (stored) {
+        loadPgn(stored);
+        sessionStorage.removeItem(importKey);
+        setTab("analyze");
+      }
+    }
+    if (params.get("tab") === "search") setTab("search");
+    if (params.get("source") === "chesscom") setSearchSource("chesscom");
+    const player = params.get("player");
+    if (player) {
+      setSearchPlayer(player);
+      if (params.get("tab") === "search") runSearchFor(player, params.get("source") === "chesscom" ? "chesscom" : "lichess");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const runSearchFor = async (player: string, source: "lichess" | "chesscom") => {
+    if (!player.trim()) return;
     setSearchLoading(true);
     setSearchResults(null);
     setSearchMessage(null);
     try {
-      const res = await fetch(`/api/games/search?source=${searchSource}&player=${encodeURIComponent(searchPlayer.trim())}&max=25`);
+      const res = await fetch(`/api/games/search?source=${source}&player=${encodeURIComponent(player.trim())}&max=25`);
       const data = await res.json();
       if (data.games && data.games.length > 0) {
         setSearchResults(data.games);
@@ -174,6 +385,8 @@ export default function AnalyzePage() {
     }
   };
 
+  const runGameSearch = () => runSearchFor(searchPlayer, searchSource);
+
   const loadSearchedGame = (game: PastGame) => {
     if (!game.pgn) return;
     const ok = loadPgn(game.pgn);
@@ -184,21 +397,15 @@ export default function AnalyzePage() {
     }
   };
 
-  const evalCp = engine?.evalMate !== undefined && engine.evalMate !== 0 ? (engine.evalMate > 0 ? 999 : -999) : engine?.evalCp;
-  const evalText =
-    engine?.evalMate !== undefined && engine.evalMate !== 0
-      ? `${engine.evalMate > 0 ? "+" : "-"}M${Math.abs(engine.evalMate)}`
-      : typeof evalCp === "number"
-        ? `${evalCp >= 0 ? "+" : ""}${(evalCp / 100).toFixed(1)}`
-        : "";
-  const whitePct = typeof evalCp === "number" ? Math.round(50 + 50 * Math.tanh(evalCp / 400)) : 50;
-  const clamped = Math.min(96, Math.max(4, whitePct));
+  const selectedSquareStyle = selectedSquare
+    ? { [selectedSquare as Square]: { background: "rgba(240, 180, 41, 0.55)" } }
+    : {};
 
   return (
     <div className="wrap" style={{ padding: "24px 0 60px" }}>
       <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8 }}>Game Analyzer</h1>
       <p style={{ color: "var(--color-text-muted)", marginBottom: 20, fontSize: 15 }}>
-        Paste a PGN, load a file, or search a player&apos;s past games, then analyze with a real chess engine.
+        Paste a PGN, load a file, search a player&apos;s past games, or play moves by hand — then analyze with a real chess engine.
       </p>
 
       {/* Tabs */}
@@ -221,8 +428,8 @@ export default function AnalyzePage() {
               </div>
             )}
             <div style={{ display: "flex", gap: 10, alignItems: "stretch", maxWidth: 520 }}>
-              {/* Eval bar */}
-              <div style={{ width: 22, borderRadius: 6, overflow: "hidden", background: "var(--color-eval-black)", position: "relative", flexShrink: 0 }}>
+              {/* Eval bar — keeps the last known score, dimmed when stale */}
+              <div style={{ width: 22, borderRadius: 6, overflow: "hidden", background: "var(--color-eval-black)", position: "relative", flexShrink: 0, opacity: engineStale ? 0.55 : 1, transition: "opacity 0.3s ease" }}>
                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: `${clamped}%`, background: "var(--color-eval-white)", transition: "height 0.4s ease" }} />
                 <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", textAlign: "center", fontSize: 10, fontWeight: 800, fontFamily: "var(--font-mono)", color: "#000" }}>
                   {evalText}
@@ -230,14 +437,44 @@ export default function AnalyzePage() {
               </div>
               <div style={{ flex: 1 }}>
                 <Chessboard
-                  options={{ position: chess?.fen() || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", animationDurationInMs: 200 }}
+                  options={{
+                    position: chess?.fen() || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    animationDurationInMs: 150,
+                    allowDragging: true,
+                    onPieceDrop: ({ sourceSquare, targetSquare, piece }) => {
+                      if (!targetSquare) return false;
+                      // Auto-queen on promotion (full promotion picker is a follow-up).
+                      const isPawn = piece && piece.pieceType && piece.pieceType[1] === "P";
+                      const promo = isPawn && (targetSquare[1] === "8" || targetSquare[1] === "1") ? "q" : undefined;
+                      return playMove(sourceSquare, targetSquare, promo);
+                    },
+                    onSquareClick: ({ square }) => {
+                      if (!chess) return;
+                      const sq = square as Square;
+                      if (selectedSquare && selectedSquare !== sq) {
+                        const legal = chess.moves({ square: selectedSquare as Square, verbose: true }).find((m) => m.to === sq);
+                        if (legal) {
+                          const promo = legal.promotion || "q";
+                          playMove(selectedSquare, sq, promo);
+                          return;
+                        }
+                        setSelectedSquare(null);
+                        return;
+                      }
+                      const piece = chess.get(sq);
+                      if (piece && piece.color === chess.turn()) setSelectedSquare(sq);
+                      else setSelectedSquare(null);
+                    },
+                    squareStyles: selectedSquareStyle,
+                    boardOrientation: boardFlipped ? "black" : "white",
+                  }}
                 />
               </div>
             </div>
 
             {/* Controls */}
-            <div style={{ display: "flex", gap: 8, marginTop: 14, justifyContent: "center" }}>
-              <button onClick={() => goToMove(-1)} disabled={!chess || moveIndex <= -1} className="btn btn-outline" style={{ padding: "8px 12px", fontSize: 13 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 14, justifyContent: "center", flexWrap: "wrap" }}>
+              <button onClick={() => goToMove(-1)} disabled={!chess || moveIndex <= -1} className="btn btn-outline" style={{ padding: "8px 12px", fontSize: 13 }} title="Start position">
                 <RotateCcw size={14} />
               </button>
               <button onClick={() => goToMove(moveIndex - 1)} disabled={!chess || moveIndex <= -1} className="btn btn-outline" style={{ padding: "8px 12px", fontSize: 13 }}>
@@ -249,6 +486,44 @@ export default function AnalyzePage() {
               <button onClick={() => goToMove(moves.length - 1)} disabled={!chess || moveIndex >= moves.length - 1} className="btn btn-outline" style={{ padding: "8px 12px", fontSize: 13 }}>
                 End →
               </button>
+              <button onClick={() => setBoardFlipped((f) => !f)} className="btn btn-ghost" style={{ padding: "8px 12px", fontSize: 13 }} title="Flip board">
+                Flip
+              </button>
+              <button onClick={resetBoard} className="btn btn-ghost" style={{ padding: "8px 12px", fontSize: 13 }} title="Clear board and start a new game">
+                <RefreshCcw size={14} /> New game
+              </button>
+            </div>
+
+            {/* Manual move input — guaranteed way to play moves by hand */}
+            <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "center", alignItems: "center" }}>
+              <input
+                value={manualInput}
+                onChange={(e) => setManualInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const ok = playSan(manualInput);
+                    if (ok) setManualInput("");
+                  }
+                }}
+                placeholder="Type a move: e4 · Nf3 · O-O · e2e4"
+                style={{
+                  width: 220, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--color-border)",
+                  background: "var(--color-surface)", color: "var(--color-text)", fontSize: 13, outline: "none",
+                  fontFamily: "var(--font-mono)", textAlign: "center",
+                }}
+              />
+              <button
+                onClick={() => { const ok = playSan(manualInput); if (ok) setManualInput(""); }}
+                disabled={!manualInput.trim()}
+                className="btn btn-outline"
+                style={{ padding: "8px 14px", fontSize: 13 }}
+              >
+                Play
+              </button>
+            </div>
+
+            <div style={{ fontSize: 12, color: "var(--color-text-faint)", marginTop: 8, textAlign: "center" }}>
+              Drag a piece on the board, click a piece then its destination, or type a move above to play by hand.
             </div>
 
             {/* Move list */}
@@ -287,6 +562,11 @@ export default function AnalyzePage() {
             <button onClick={() => loadPgn(EXAMPLE_PGN)} className="btn btn-ghost" style={{ width: "100%", marginTop: 8, fontSize: 13 }}>
               <Zap size={14} /> Load example game
             </button>
+            {importNote && (
+              <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8, background: "var(--color-gold-muted)", border: "1px solid rgba(240,180,41,0.3)", fontSize: 12.5, color: "var(--color-text-muted)", lineHeight: 1.5 }}>
+                {importNote}
+              </div>
+            )}
 
             {/* Engine panel */}
             <div style={{ marginTop: 18, padding: 16, background: "var(--color-bg-raised)", borderRadius: 10, border: "1px solid var(--color-border)" }}>
@@ -310,10 +590,10 @@ export default function AnalyzePage() {
                     </div>
                   ))}
                 </div>
-              ) : chess ? (
-                <div style={{ fontSize: 12.5, color: "var(--color-text-muted)" }}>Waiting for engine analysis...</div>
+              ) : moves.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: "var(--color-text-muted)" }}>Play moves or load a game to see engine analysis.</div>
               ) : (
-                <div style={{ fontSize: 12.5, color: "var(--color-text-muted)" }}>Load a game to see engine analysis.</div>
+                <div style={{ fontSize: 12.5, color: "var(--color-text-muted)" }}>Waiting for engine analysis...</div>
               )}
             </div>
           </div>
@@ -382,7 +662,6 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       style={{
         display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "1px solid",
-     
         borderColor: active ? "var(--color-accent)" : "var(--color-border)",
         background: active ? "var(--color-accent-muted)" : "transparent",
         color: active ? "var(--color-accent)" : "var(--color-text-muted)",
@@ -406,10 +685,9 @@ function pvToSan(startFen: string, uciMoves: string): string {
     const chess = new Chess(startFen);
     const sans: string[] = [];
     for (const uci of uciMoves.split(" ").filter(Boolean).slice(0, 8)) {
-      const from = uci.slice(0, 2);
-      const to = uci.slice(2, 4);
+      const { from, to } = normalizeUciCastle(uci.slice(0, 2), uci.slice(2, 4));
       const promotion = uci.length > 4 ? uci[4] : undefined;
-      const mv = chess.move({ from, to, promotion });
+      const mv = chess.move({ from: from as never, to: to as never, promotion });
       sans.push(mv.san);
     }
     return sans.join(" ");
