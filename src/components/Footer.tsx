@@ -30,6 +30,7 @@ export default function Footer() {
           <div style={{ display: "flex", gap: 16 }}>
             <Link href="/privacy" style={{ color: "var(--color-text-faint)" }}>Privacy</Link>
             <Link href="/terms" style={{ color: "var(--color-text-faint)" }}>Terms</Link>
+            <Link href="/admin" style={{ color: "var(--color-text-faint)" }}>Organizer login</Link>
           </div>
           <div style={{ display: "flex", gap: 16 }}>
             <span>Powered by <a href="https://prochess-v2-ashen.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent)", fontWeight: 700 }}>Prochess</a></span>

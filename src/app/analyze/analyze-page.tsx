@@ -317,7 +317,7 @@ export default function AnalyzePage() {
 
     (async () => {
       // Local Stockfish first; the worker returns null when it can't start.
-      const local = await analyzePosition({ fen, multiPv: 3, depth: 16 });
+      const local = await analyzePosition({ fen, multiPv: 3, depth: 18 });
       if (reqId !== evalRequestRef.current) return;
       if (local && local.lines && local.lines.length > 0) {
         const lines: EngineLine[] = local.lines.map((l) => ({
@@ -333,13 +333,18 @@ export default function AnalyzePage() {
   }, [chess]);
 
   // Keyboard navigation — left/right arrow keys step through moves. Attached
-  // to window (not a div), so it works regardless of where focus is; typing
-  // in an input/textarea still gets the keys untouched.
+  // to window in the CAPTURE phase so no other handler can swallow the key,
+  // and it works no matter what has focus. Typing is protected: a non-empty
+  // text input (e.g. a half-typed move) keeps the arrow keys for the cursor,
+  // but an empty input still lets arrows navigate.
   useEffect(() => {
     if (tab !== "analyze") return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (t) {
+        if (t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable) return;
+        if (t.tagName === "INPUT" && (t as HTMLInputElement).value.length > 0) return;
+      }
       if (e.key === "ArrowRight") {
         e.preventDefault();
         goToMove(moveIndex + 1);
@@ -354,22 +359,29 @@ export default function AnalyzePage() {
         goToMove(moves.length - 1);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [tab, goToMove, moveIndex, moves.length]);
 
-  // Engine value to display: always the last known score, dimmed when stale.
+  // Engine value to display. While a FRESH position is being analysed, show a
+  // neutral pulsing bar with "…" instead of the previous position's score —
+  // showing a stale eval there is what made the bar look like it was jumping
+  // up and down after every move. The real value appears the moment the
+  // engine finishes the current position.
   const engineStale = Boolean(engine && chess && engine.fen !== chess.fen());
+  const analyzingFresh = engineLoading && engineStale;
   const displayEval = engine?.evalMate !== undefined && engine.evalMate !== 0
     ? (engine.evalMate > 0 ? 999 : -999)
     : engine?.evalCp;
   const evalText =
-    engine?.evalMate !== undefined && engine.evalMate !== 0
-      ? `${engine.evalMate > 0 ? "+" : "-"}M${Math.abs(engine.evalMate)}`
-      : typeof displayEval === "number"
-        ? `${displayEval >= 0 ? "+" : ""}${(displayEval / 100).toFixed(1)}`
-        : "";
-  const whitePct = typeof displayEval === "number" ? Math.round(50 + 50 * Math.tanh(displayEval / 400)) : 50;
+    analyzingFresh
+      ? "…"
+      : engine?.evalMate !== undefined && engine.evalMate !== 0
+        ? `${engine.evalMate > 0 ? "+" : "-"}M${Math.abs(engine.evalMate)}`
+        : typeof displayEval === "number"
+          ? `${displayEval >= 0 ? "+" : ""}${(displayEval / 100).toFixed(1)}`
+          : "";
+  const whitePct = analyzingFresh ? 50 : typeof displayEval === "number" ? Math.round(50 + 50 * Math.tanh(displayEval / 400)) : 50;
   const clamped = Math.min(96, Math.max(4, whitePct));
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -480,7 +492,7 @@ export default function AnalyzePage() {
             )}
             <div style={{ display: "flex", gap: 10, alignItems: "stretch", maxWidth: 520 }}>
               {/* Eval bar — keeps the last known score, dimmed when stale */}
-              <div style={{ width: 22, borderRadius: 6, overflow: "hidden", background: "var(--color-eval-black)", position: "relative", flexShrink: 0, opacity: engineStale ? 0.55 : 1, transition: "opacity 0.3s ease" }}>
+              <div style={{ width: 22, borderRadius: 6, overflow: "hidden", background: "var(--color-eval-black)", position: "relative", flexShrink: 0, opacity: engineStale ? 0.55 : 1, transition: "opacity 0.3s ease", animation: analyzingFresh ? "pulse 1.1s ease-in-out infinite" : "none" }}>
                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: `${clamped}%`, background: "var(--color-eval-white)", transition: "height 0.4s ease" }} />
                 <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", textAlign: "center", fontSize: 10, fontWeight: 800, fontFamily: "var(--font-mono)", color: "#000" }}>
                   {evalText}

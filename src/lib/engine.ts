@@ -140,7 +140,10 @@ function runNext() {
   currentFen = pending.req.fen;
   w.postMessage(`setoption name MultiPV value ${pending.req.multiPv || 3}`);
   w.postMessage(`position fen ${pending.req.fen}`);
-  w.postMessage(`go depth ${pending.req.depth || 18}`);
+  // Search to the requested depth but never run longer than 2s per position —
+  // deep enough for stable evals, fast enough that stepping through a game
+  // never feels stuck. (Stockfish stops at whichever limit comes first.)
+  w.postMessage(`go depth ${pending.req.depth || 18} movetime 2000`);
 }
 
 /**
@@ -150,7 +153,18 @@ function runNext() {
  */
 export function analyzePosition(req: EngineRequest): Promise<EngineResult | null> {
   return new Promise((resolve) => {
-    queue.push({ req, resolve });
+    const pending = { req, resolve };
+    if (busy && queue.length > 0) {
+      // A search is already running (queue[0]). Drop every older *pending*
+      // request and keep only the newest one — stepping through a game fast
+      // must not queue up a dozen stale positions that each take a second to
+      // analyse (that backlog is what made the eval bar lag and flip-flop).
+      // The running search finishes, its result is discarded as stale by the
+      // caller, and the newest position runs immediately after.
+      queue = [queue[0], pending];
+    } else {
+      queue.push(pending);
+    }
     runNext();
   });
 }

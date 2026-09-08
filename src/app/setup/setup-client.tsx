@@ -25,14 +25,9 @@ interface FileSystemFileHandle extends FileSystemHandle {
   kind: "file";
   getFile: () => Promise<File>;
 }
-interface FileSystemDirectoryHandle extends FileSystemHandle {
-  kind: "directory";
-  entries: () => AsyncIterable<[string, FileSystemHandle]>;
-}
 declare global {
   interface Window {
     showOpenFilePicker?: (opts?: { types?: { description?: string; accept: Record<string, string[]> }[] }) => Promise<FileSystemFileHandle[]>;
-    showDirectoryPicker?: (opts?: { mode?: string }) => Promise<FileSystemDirectoryHandle>;
   }
 }
 
@@ -80,6 +75,7 @@ export default function SetupClient() {
   const [gameCount, setGameCount] = useState<number | null>(null);
   const [watchError, setWatchError] = useState<string | null>(null);
   const handleRef = useRef<FileSystemFileHandle | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastContentRef = useRef("");
@@ -91,12 +87,11 @@ export default function SetupClient() {
   const [folderError, setFolderError] = useState<string | null>(null);
 
   // ---------- Lichess multi-section state ----------
-  const [pendingTournament, setPendingTournament] = useState<{ id: string; name: string; rounds: { id: string; name: string }[] } | null>(null);
+  const [pendingTournament, setPendingTournament] = useState<{ id: string; name: string; rounds: { id: string; name: string }[]; isRound?: boolean } | null>(null);
   const [linkedSections, setLinkedSections] = useState<{ label: string; tournamentId?: string; rounds: { id: string; label: string }[] }[]>([]);
   const [detecting, setDetecting] = useState(false);
   const [sectionLabel, setSectionLabel] = useState("");
   const [lichessNote, setLichessNote] = useState<string | null>(null);
-  const [dirSupported] = useState(() => typeof window !== "undefined" && typeof window.showDirectoryPicker === "function");
 
   const createSession = useCallback(async (src: SourceMode, lichessSections?: { label: string; tournamentId?: string; rounds: { id: string; label: string }[] }[]) => {
     setCreating(true);
@@ -204,63 +199,52 @@ export default function SetupClient() {
   useEffect(() => stopWatcher, [stopWatcher]);
 
   // ---------- Folder upload ----------
-  const readFolder = useCallback(async (dirHandle: FileSystemDirectoryHandle, baseCategory: string, out: PendingFile[]) => {
-    for await (const [entryName, handle] of dirHandle.entries()) {
-      if (handle.kind === "file") {
-        if (!/\.(pgn|txt)$/i.test(entryName)) continue;
-        const file = await (handle as FileSystemFileHandle).getFile();
-        const text = await file.text();
-        if (text.trim().length < 20) continue;
-        out.push({
-          category: baseCategory || "Main",
-          round: entryName.replace(/\.(pgn|txt)$/i, ""),
-          pgn: text,
-        });
-      } else if (handle.kind === "directory") {
-        // A subfolder is a category (section): "U12", "U16", "Women"...
-        await readFolder(handle as FileSystemDirectoryHandle, baseCategory ? `${baseCategory} / ${entryName}` : entryName, out);
+  // Uses a plain <input type="file" webkitdirectory multiple> so folder upload
+  // works in EVERY browser (Chrome, Edge, Firefox, Safari) — no Chrome-only
+  // directory-picker API required. Subfolders become categories (U12, U16,
+  // Women...) and each PGN file becomes a round.
+  const handleFolderPicked = useCallback(async (fileList: FileList | null) => {
+    const id = sessionIdRef.current;
+    if (!id || !fileList || fileList.length === 0) return;
+    setFolderState("reading");
+    setFolderError(null);
+    setFolderResults([]);
+    const files: PendingFile[] = [];
+    for (const file of Array.from(fileList)) {
+      if (!/\.(pgn|txt)$/i.test(file.name)) continue;
+      // webkitRelativePath looks like "TournamentFolder/U12/Round1.pgn" —
+      // the first segment is the folder the user picked, drop it.
+      const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath || "";
+      const parts = rel.split("/").filter(Boolean).slice(1);
+      const category = parts.length >= 2 ? parts.slice(0, -1).join(" / ") : "Main";
+      const round = file.name.replace(/\.(pgn|txt)$/i, "");
+      let text = "";
+      try {
+        text = await file.text();
+      } catch {
+        continue;
       }
+      if (text.trim().length < 20) continue;
+      files.push({ category, round, pgn: text });
     }
-  }, []);
-
-  const uploadFolder = useCallback(async (id: string) => {
-    if (!window.showDirectoryPicker) {
-      setFolderError("Folder upload needs Chrome or Edge. You can still upload single PGN files or paste PGN.");
+    if (files.length === 0) {
+      setFolderState("error");
+      setFolderError("No PGN files found in that folder. Put .pgn files in the folder (subfolders become categories like U12, U16).");
       return;
     }
-    try {
-      const dirHandle = await window.showDirectoryPicker({ mode: "read" });
-      setFolderState("reading");
-      setFolderError(null);
-      const files: PendingFile[] = [];
-      await readFolder(dirHandle, "", files);
-      if (files.length === 0) {
-        setFolderState("error");
-        setFolderError("No PGN files found in that folder. Put .pgn files in the folder (subfolders become categories like U12, U16).");
-        return;
-      }
-      setFolderFiles(files);
-      setFolderState("uploading");
-      setFolderResults([]);
-      const results: UploadResult[] = [];
-      let failures = 0;
-      for (const f of files) {
-        const res = await uploadPgn(id, f.pgn, f.category, f.round);
-        if (res.ok) results.push({ category: f.category, round: f.round, games: res.gameCount });
-        else failures++;
-      }
-      setFolderResults(results);
-      setFolderState(failures === 0 ? "done" : "done");
-      if (failures > 0) setFolderError(`${failures} file(s) failed to upload.`);
-    } catch (e) {
-      if ((e as Error).name === "AbortError") {
-        setFolderState("idle");
-        return;
-      }
-      setFolderState("error");
-      setFolderError("Could not read that folder. It may be locked by the DGT software.");
+    setFolderFiles(files);
+    setFolderState("uploading");
+    const results: UploadResult[] = [];
+    let failures = 0;
+    for (const f of files) {
+      const res = await uploadPgn(id, f.pgn, f.category, f.round);
+      if (res.ok) results.push({ category: f.category, round: f.round, games: res.gameCount });
+      else failures++;
     }
-  }, [readFolder, uploadPgn]);
+    setFolderResults(results);
+    setFolderState("done");
+    if (failures > 0) setFolderError(`${failures} file(s) failed to upload.`);
+  }, [uploadPgn]);
 
   // ---------- Lichess linking ----------
   const detectLichessLink = useCallback(async () => {
@@ -304,11 +288,13 @@ export default function SetupClient() {
           // Group discovery failed — fall through to the single-section flow.
         }
         // Single tournament (no group): remember it as a pending section.
-        setPendingTournament({ id: data.tournament.id, name: data.tournament.name, rounds: data.rounds });
+        setPendingTournament({ id: data.tournament.id, name: data.tournament.name, rounds: data.rounds, isRound: false });
         setSectionLabel(data.tournament.name);
       } else if (res.status === 404) {
-        // Not a tournament — treat the id as a single round.
-        setPendingTournament({ id, name: "Round", rounds: [{ id, name: "Linked round" }] });
+        // Not a tournament — treat the id as a single round. isRound is
+        // important: a round id must NOT be stored as a tournamentId, or the
+        // broadcast validation would try to fetch it as a tournament and fail.
+        setPendingTournament({ id, name: "Round", rounds: [{ id, name: "Linked round" }], isRound: true });
         setSectionLabel("Main");
       } else {
         setError(data.error || "Could not reach Lichess to check that link. Try again in a moment.");
@@ -328,7 +314,10 @@ export default function SetupClient() {
       ...prev,
       {
         label: sectionLabel.trim() || pendingTournament.name,
-        tournamentId: pendingTournament.id,
+        // A single-round link has no tournament id — leave it undefined so the
+        // API probes the round itself instead of wrongly treating it as a
+        // tournament (that mismatch caused "does not point at a broadcast").
+        tournamentId: pendingTournament.isRound ? undefined : pendingTournament.id,
         rounds,
       },
     ]);
@@ -541,12 +530,26 @@ export default function SetupClient() {
                   </button>
                 )}
                 {created && (
-                  <button onClick={() => uploadFolder(sessionIdRef.current || "")} disabled={!dirSupported} className="btn btn-outline" style={{ padding: "12px 24px" }}>
+                  <label className="btn btn-outline" style={{ padding: "12px 24px", cursor: "pointer" }}>
                     <Layers size={15} /> Upload folder (categories)
-                  </button>
+                    <input
+                      ref={folderInputRef}
+                      type="file"
+                      multiple
+                      {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                      onChange={(e) => {
+                        handleFolderPicked(e.target.files);
+                        // Reset the value so picking the same folder again re-fires.
+                        e.target.value = "";
+                      }}
+                      style={{ display: "none" }}
+                    />
+                  </label>
                 )}
-                {created && !fsaSupported && !dirSupported && (
-                  <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Live file watching and folder upload need Chrome or Edge. You can still paste PGN above.</span>
+                {created && !fsaSupported && (
+                  <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                    Folder upload works in every browser. Live file watching (auto-refresh from the DGT file) needs Chrome or Edge.
+                  </span>
                 )}
               </div>
             </div>
