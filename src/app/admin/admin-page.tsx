@@ -353,8 +353,8 @@ export default function AdminPage() {
 
           <p style={{ fontSize: 11.5, color: "var(--color-text-faint)" }}>
             Settings apply immediately. Stream links and config are stored in memory on the server and reset on redeploy
-            until a database is connected. The default admin passcode is &quot;chessstream-admin&quot;; set the ADMIN_PASSCODE
-            environment variable in production.
+            until a database is connected. The default admin passcode is 0; set the ADMIN_PASSCODE
+            environment variable in production to override it.
           </p>
         </div>
       )}

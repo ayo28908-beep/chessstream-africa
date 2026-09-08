@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Chess, type Square } from "chess.js";
 import { normalizeUciCastle } from "@/lib/utils";
+import { analyzePosition } from "@/lib/engine";
 import {
   Upload, Play, ArrowLeft, ArrowRight, RotateCcw, Zap, Search, FileText,
   ExternalLink, Loader2, AlertTriangle, RefreshCcw,
@@ -266,46 +267,96 @@ export default function AnalyzePage() {
     }
   }, [chess, moveIndex, playMove]);
 
-  // Fetch engine analysis whenever the position changes. The last known eval
-  // is kept (never wiped to zero) — a missing cloud record just shows the
-  // "no data" note while the previous score stays visible, marked stale.
+  // Fetch engine analysis whenever the position changes. A local Stockfish
+  // WASM worker runs in the browser (every position gets analysed); Lichess
+  // cloud-eval is the fallback when the worker can't start (e.g. WASM serving
+  // issue). The last known eval is kept (never wiped to zero) — a missing
+  // result just shows a note while the previous score stays visible.
   useEffect(() => {
     if (!chess) return;
     const fen = chess.fen();
     const reqId = ++evalRequestRef.current;
     setEngineLoading(true);
     setEngineError(null);
-    (async () => {
+
+    const finish = (data: { depth: number; lines: EngineLine[] }) => {
+      if (reqId !== evalRequestRef.current) return;
+      const top = data.lines[0];
+      setEngine({
+        fen,
+        evalCp: top?.evalCp,
+        evalMate: top?.evalMate,
+        depth: data.depth || 1,
+        lines: data.lines,
+      });
+      setEngineError(null);
+      setEngineLoading(false);
+    };
+
+    const runCloud = async () => {
       try {
         const res = await fetch(`/api/lichess/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=3`);
-        if (reqId !== evalRequestRef.current) return; // stale response
-        if (!res.ok) {
-          setEngineError("Engine data not available for this exact position. Showing the last known eval.");
-          return;
-        }
+        if (reqId !== evalRequestRef.current) return;
+        if (!res.ok) throw new Error("cloud-eval unavailable");
         const data = await res.json();
         if (reqId !== evalRequestRef.current) return;
-        if (!data.pvs || data.pvs.length === 0) {
-          setEngineError("Engine data not available for this exact position. Showing the last known eval.");
-          return;
-        }
+        if (!data.pvs || data.pvs.length === 0) throw new Error("no cloud data");
         const lines: EngineLine[] = data.pvs.map((pv: { moves: string; cp?: number; mate?: number }) => ({
           san: pvToSan(fen, pv.moves),
           evalCp: pv.cp,
           evalMate: pv.mate,
         }));
-        const top = data.pvs[0] || {};
-        setEngine({ fen, evalCp: top.cp, evalMate: top.mate, depth: data.depth || 0, lines });
-        setEngineError(null);
+        finish({ depth: data.depth || 0, lines });
       } catch {
         if (reqId === evalRequestRef.current) {
-          setEngineError("Could not reach the analysis engine. Showing the last known eval.");
+          setEngineError("Engine could not analyse this position. Showing the last known eval.");
+          setEngineLoading(false);
         }
-      } finally {
-        if (reqId === evalRequestRef.current) setEngineLoading(false);
+      }
+    };
+
+    (async () => {
+      // Local Stockfish first; the worker returns null when it can't start.
+      const local = await analyzePosition({ fen, multiPv: 3, depth: 16 });
+      if (reqId !== evalRequestRef.current) return;
+      if (local && local.lines && local.lines.length > 0) {
+        const lines: EngineLine[] = local.lines.map((l) => ({
+          san: pvToSan(fen, l.san), // engine returns the UCI pv; render as SAN
+          evalCp: l.evalCp,
+          evalMate: l.evalMate,
+        }));
+        finish({ depth: local.depth || 1, lines });
+      } else {
+        await runCloud();
       }
     })();
   }, [chess]);
+
+  // Keyboard navigation — left/right arrow keys step through moves. Attached
+  // to window (not a div), so it works regardless of where focus is; typing
+  // in an input/textarea still gets the keys untouched.
+  useEffect(() => {
+    if (tab !== "analyze") return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goToMove(moveIndex + 1);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goToMove(moveIndex - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        goToMove(-1);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        goToMove(moves.length - 1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tab, goToMove, moveIndex, moves.length]);
 
   // Engine value to display: always the last known score, dimmed when stale.
   const engineStale = Boolean(engine && chess && engine.fen !== chess.fen());

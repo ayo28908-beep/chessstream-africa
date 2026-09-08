@@ -11,7 +11,7 @@ import {
 //   Organizers update per-tournament settings (AI commentary, tiebreak, etc.)
 
 function isAdmin(req: NextRequest): boolean {
-  const pass = process.env.ADMIN_PASSCODE || "chessstream-admin";
+  const pass = process.env.ADMIN_PASSCODE || "0";
   return req.headers.get("x-admin-passcode") === pass;
 }
 

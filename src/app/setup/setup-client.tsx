@@ -95,6 +95,7 @@ export default function SetupClient() {
   const [linkedSections, setLinkedSections] = useState<{ label: string; tournamentId?: string; rounds: { id: string; label: string }[] }[]>([]);
   const [detecting, setDetecting] = useState(false);
   const [sectionLabel, setSectionLabel] = useState("");
+  const [lichessNote, setLichessNote] = useState<string | null>(null);
   const [dirSupported] = useState(() => typeof window !== "undefined" && typeof window.showDirectoryPicker === "function");
 
   const createSession = useCallback(async (src: SourceMode, lichessSections?: { label: string; tournamentId?: string; rounds: { id: string; label: string }[] }[]) => {
@@ -270,11 +271,39 @@ export default function SetupClient() {
     }
     setDetecting(true);
     setError(null);
+    setLichessNote(null);
     try {
       const res = await fetch(`/api/lichess/tournament/${encodeURIComponent(id)}`);
       const data = await res.json();
       if (res.ok && data.rounds && data.rounds.length > 0) {
-        // It's a tournament: remember it as a pending section with all rounds.
+        // It's a tournament. If it belongs to a broadcast group (e.g. the
+        // same event has U12/U16/Open, or Finals + Preliminary), auto-create
+        // a section for every category instead of linking them one by one.
+        try {
+          const secRes = await fetch(`/api/lichess/tournament/${encodeURIComponent(id)}/sections`);
+          const secData = await secRes.json();
+          if (secRes.ok && secData.sections && secData.sections.length > 1) {
+            const sections: { label: string; tournamentId: string; rounds: { id: string; label: string }[] }[] = secData.sections.map((s: { label: string; tournamentId: string; rounds: { id: string; name: string }[] }) => ({
+              label: s.label,
+              tournamentId: s.tournamentId,
+              rounds: s.rounds.map((r: { id: string; name: string }) => ({ id: r.id, label: r.name })),
+            }));
+            setLinkedSections(sections);
+            setPendingTournament(null);
+            setSectionLabel("");
+            setLichessUrl("");
+            setLichessNote(
+              `Found ${sections.length} categories under \u201C${secData.group}\u201D and linked them all automatically: ` +
+              sections.map((s) => s.label).join(", ") +
+              ". You can rename or remove any below before creating the broadcast."
+            );
+            setDetecting(false);
+            return;
+          }
+        } catch {
+          // Group discovery failed — fall through to the single-section flow.
+        }
+        // Single tournament (no group): remember it as a pending section.
         setPendingTournament({ id: data.tournament.id, name: data.tournament.name, rounds: data.rounds });
         setSectionLabel(data.tournament.name);
       } else if (res.status === 404) {
@@ -545,6 +574,13 @@ export default function SetupClient() {
                 </div>
               </div>
 
+              {lichessNote && (
+                <div style={{ padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-accent)", background: "var(--color-accent-muted)", fontSize: 13, lineHeight: 1.6 }}>
+                  <Check size={14} style={{ display: "inline", marginRight: 6, color: "var(--color-accent)", verticalAlign: "-2px" }} />
+                  {lichessNote}
+                </div>
+              )}
+
               {pendingTournament && (
                 <div style={{ padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-accent)", background: "var(--color-accent-muted)", fontSize: 13 }}>
                   <div style={{ fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
@@ -563,7 +599,7 @@ export default function SetupClient() {
                     <button onClick={addSectionFromPending} className="btn btn-primary" style={{ padding: "8px 14px", fontSize: 13 }}>
                       <Plus size={13} /> Add as section
                     </button>
-                    <button onClick={() => { setPendingTournament(null); setSectionLabel(""); }} className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 12 }}>
+                    <button onClick={() => { setPendingTournament(null); setSectionLabel(""); setLichessNote(null); }} className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 12 }}>
                       Cancel
                     </button>
                   </div>

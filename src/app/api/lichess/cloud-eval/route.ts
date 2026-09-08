@@ -14,10 +14,10 @@ export async function GET(req: NextRequest) {
 
   const result = await getCloudEval(fen, multiPv);
   if (!result) {
-    return NextResponse.json(
-      { error: "Engine data not available for this position", fen },
-      { status: 404 }
-    );
+    // Return 200 with an empty result set rather than 404: the client treats
+    // "no pvs" as "no data for this position" (the local engine is the primary
+    // path; cloud-eval is only a fallback). 404 would just add a console error.
+    return NextResponse.json({ fen, depth: 0, pvs: [] });
   }
   return NextResponse.json(result);
 }

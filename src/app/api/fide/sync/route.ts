@@ -11,7 +11,7 @@ import { syncRatingList, getIndexStatus, clearIndex } from "@/lib/fideSearch";
 // Passcode: header "x-admin-passcode" must equal ADMIN_PASSCODE (env) or the
 // built-in default. Set ADMIN_PASSCODE on Vercel for production.
 
-const DEFAULT_PASSCODE = "chessstream-admin";
+const DEFAULT_PASSCODE = "0";
 
 function isAuthorized(req: NextRequest): boolean {
   const provided = req.headers.get("x-admin-passcode") || "";

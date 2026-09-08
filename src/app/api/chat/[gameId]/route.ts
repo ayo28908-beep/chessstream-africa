@@ -26,7 +26,7 @@ function messagesFor(gameId: string): ChatMessage[] {
 }
 
 function isModerator(req: NextRequest): boolean {
-  const pass = process.env.ADMIN_PASSCODE || "chessstream-admin";
+  const pass = process.env.ADMIN_PASSCODE || "0";
   return req.headers.get("x-admin-passcode") === pass;
 }
 

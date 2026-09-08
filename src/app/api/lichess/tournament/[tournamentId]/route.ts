@@ -63,7 +63,9 @@ export async function GET(
         name: tour.name,
         slug: tour.slug,
         url: tour.url,
-        group: tour.group || undefined,
+        // The broadcast group lives at the top level of the API response
+        // (a string naming the parent event, e.g. "Tech Mahindra GCL 2026").
+        group: typeof data.group === "string" ? data.group : undefined,
       },
       roundCount: rounds.length,
       rounds,
