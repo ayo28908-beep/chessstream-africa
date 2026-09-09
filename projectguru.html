@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>theprojectgurung — Your Thesis, Finished in 24 Hours</title>
+<meta name="description" content="Upload your Chapters 1-3. A human expert writes your remaining chapters and delivers within 24 hours. Real verified citations. Every discipline. Every level." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#141833;
+    --ink-2:#1d2247;
+    --ink-3:#2a3060;
+    --gold:#d9a441;
+    --gold-soft:#e8c37a;
+    --cream:#faf7f2;
+    --paper:#ffffff;
+    --muted:#5c6285;
+    --line:rgba(20,24,51,.12);
+    --radius:18px;
+    --shadow:0 18px 50px -18px rgba(20,24,51,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:92px}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    color:var(--ink);background:var(--cream);line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.serif{font-family:'Fraunces',Georgia,serif;line-height:1.12;letter-spacing:-.01em}
+  img{max-width:100%}
+  a{color:inherit}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+  .eyebrow::before{content:"";width:26px;height:2px;background:var(--gold);display:inline-block}
+  .section{padding:96px 0}
+  .section.dark{background:var(--ink);color:#eef0ff}
+  .section.dark .eyebrow{color:var(--gold-soft)}
+  .section-title{font-size:clamp(30px,4.4vw,46px);font-weight:600;margin-bottom:14px}
+  .section-sub{color:var(--muted);max-width:640px;font-size:17px}
+  .section.dark .section-sub{color:#aab0d6}
+  .center{text-align:center}
+  .center .section-sub{margin:0 auto}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:15px 28px;border-radius:999px;font-weight:600;font-size:15.5px;text-decoration:none;cursor:pointer;border:2px solid transparent;transition:transform .18s ease,box-shadow .18s ease,background .18s ease,color .18s ease;font-family:'Inter',sans-serif}
+  .btn:active{transform:scale(.97)}
+  .btn-gold{background:var(--gold);color:var(--ink);box-shadow:0 10px 30px -10px rgba(217,164,65,.55)}
+  .btn-gold:hover{background:var(--gold-soft);transform:translateY(-2px)}
+  .btn-ghost{border-color:rgba(20,24,51,.25);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--ink);transform:translateY(-2px)}
+  .btn-ghost-light{border-color:rgba(238,240,255,.35);color:#eef0ff;background:transparent}
+  .btn-ghost-light:hover{border-color:#eef0ff;transform:translateY(-2px)}
+  nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(250,247,242,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .logo{font-family:'Fraunces',serif;font-weight:700;font-size:21px;letter-spacing:-.02em;text-decoration:none;color:var(--ink)}
+  .logo span{color:var(--gold)}
+  .nav-links{display:flex;align-items:center;gap:30px;list-style:none}
+  .nav-links a{text-decoration:none;font-size:14.5px;font-weight:500;color:var(--muted);transition:color .15s}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-links .btn{padding:11px 22px;font-size:14px}
+  .burger{display:none;background:none;border:none;cursor:pointer;padding:8px}
+  .burger span{display:block;width:24px;height:2px;background:var(--ink);margin:5px 0;transition:.25s}
+  .hero{min-height:100vh;display:flex;align-items:center;background:radial-gradient(900px 500px at 85% -10%,rgba(217,164,65,.16),transparent 60%),radial-gradient(700px 500px at -10% 110%,rgba(42,48,96,.14),transparent 55%),var(--cream);padding:150px 0 90px;position:relative;overflow:hidden}
+  .hero::after{content:"§";position:absolute;right:-40px;bottom:-90px;font-family:'Fraunces',serif;font-size:420px;color:rgba(20,24,51,.045);pointer-events:none;line-height:1}
+  .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center;position:relative;z-index:1}
+  .hero h1{font-size:clamp(42px,6.2vw,72px);font-weight:600;margin:18px 0 22px}
+  .hero h1 em{font-style:normal;color:var(--gold);position:relative;white-space:nowrap}
+  .hero p.lead{font-size:18.5px;color:var(--muted);max-width:560px;margin-bottom:34px}
+  .hero p.lead strong{color:var(--ink)}
+  .hero-ctas{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:38px}
+  .trust-chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{font-size:13px;font-weight:600;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:9px 16px;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px -8px rgba(20,24,51,.2)}
+  .chip::before{content:"✓";color:var(--gold);font-weight:800}
+  .hero-card{background:var(--ink);color:#eef0ff;border-radius:26px;padding:38px 34px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .hero-card::before{content:"";position:absolute;top:-70px;right:-70px;width:200px;height:200px;border-radius:50%;background:rgba(217,164,65,.18)}
+  .hero-card h3{font-size:22px;margin-bottom:20px;color:#fff}
+  .hero-card ol{list-style:none;counter-reset:step}
+  .hero-card li{counter-increment:step;display:flex;gap:16px;padding:14px 0;border-bottom:1px solid rgba(238,240,255,.12);font-size:14.5px;color:#c6cbe8}
+  .hero-card li:last-child{border-bottom:none}
+  .hero-card li::before{content:counter(step);flex:0 0 30px;height:30px;border-radius:50%;background:var(--gold);color:var(--ink);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center}
+  .hero-card li strong{color:#fff;display:block;font-size:15px;margin-bottom:2px}
+  .stats{background:var(--ink);color:#fff;padding:56px 0}
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center}
+  .stat-num{font-family:'Fraunces',serif;font-size:clamp(34px,4vw,50px);font-weight:700;color:var(--gold)}
+  .stat-label{font-size:13.5px;color:#aab0d6;margin-top:4px;letter-spacing:.04em}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:54px}
+  .step-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:36px 30px;transition:transform .2s,box-shadow .2s;position:relative}
+  .step-card:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+  .step-num{font-family:'Fraunces',serif;font-size:44px;font-weight:700;color:var(--gold);line-height:1;margin-bottom:18px}
+  .step-card h3{font-size:20px;margin-bottom:10px}
+  .step-card p{font-size:15px;color:var(--muted)}
+  .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:54px}
+  .svc-card{background:var(--ink-2);color:#eef0ff;border-radius:24px;padding:44px 38px;position:relative;overflow:hidden;transition:transform .2s}
+  .svc-card:hover{transform:translateY(-6px)}
+  .svc-card::after{content:"";position:absolute;top:-80px;right:-80px;width:220px;height:220px;border-radius:50%;background:rgba(217,164,65,.12)}
+  .svc-card.alt{background:var(--paper);color:var(--ink);border:1px solid var(--line)}
+  .svc-card.alt::after{background:rgba(29,34,71,.06)}
+  .svc-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);background:var(--gold);border-radius:999px;padding:6px 14px;margin-bottom:20px}
+  .svc-card.alt .svc-tag{color:#fff;background:var(--ink)}
+  .svc-card h3{font-size:26px;margin-bottom:12px}
+  .svc-card p.desc{font-size:15px;color:#aab0d6;margin-bottom:24px}
+  .svc-card.alt p.desc{color:var(--muted)}
+  .svc-card ul{list-style:none;margin-bottom:30px}
+  .svc-card li{font-size:14.5px;padding:7px 0 7px 28px;position:relative;color:#c6cbe8}
+  .svc-card.alt li{color:var(--muted)}
+  .svc-card li::before{content:"✓";position:absolute;left:0;color:var(--gold);font-weight:800}
+  .order-shell{max-width:780px;margin:54px auto 0;background:var(--paper);border:1px solid var(--line);border-radius:26px;padding:48px;box-shadow:var(--shadow)}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .field{display:flex;flex-direction:column;gap:7px}
+  .field.full{grid-column:1/-1}
+  label{font-size:13.5px;font-weight:600;color:var(--ink-2)}
+  label .req{color:#c0392b}
+  input[type=text],input[type=email],input[type=tel],select,textarea{font-family:'Inter',sans-serif;font-size:15px;color:var(--ink);padding:13px 15px;border:1.5px solid var(--line);border-radius:12px;background:#fdfcfa;transition:border-color .15s,box-shadow .15s;width:100%}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px rgba(217,164,65,.15)}
+  textarea{resize:vertical;min-height:110px}
+  .radio-row{display:flex;gap:14px;flex-wrap:wrap}
+  .radio-card{flex:1;min-width:220px;cursor:pointer;position:relative}
+  .radio-card input{position:absolute;opacity:0;pointer-events:none}
+  .radio-card .rc-body{border:1.5px solid var(--line);border-radius:14px;padding:18px;transition:.15s;background:#fdfcfa;height:100%}
+  .radio-card input:checked + .rc-body{border-color:var(--gold);background:rgba(217,164,65,.07);box-shadow:0 0 0 4px rgba(217,164,65,.12)}
+  .rc-body strong{display:block;font-size:15px;margin-bottom:4px}
+  .rc-body span{font-size:13px;color:var(--muted)}
+  .conditional{border:1.5px dashed var(--line);border-radius:14px;padding:20px;margin-top:4px}
+  .file-note{font-size:13px;color:var(--muted);margin-top:8px}
+  .check-row{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:var(--muted)}
+  .check-row input{margin-top:4px;accent-color:var(--gold);width:17px;height:17px;flex:0 0 auto}
+  .honeypot{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
+  .q-badge{display:none;align-items:center;gap:8px;background:rgba(46,125,78,.1);color:#2e7d4e;border:1px solid rgba(46,125,78,.3);border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600}
+  .q-badge.show{display:inline-flex}
+  .form-error{display:none;background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.3);color:#c0392b;border-radius:12px;padding:12px 16px;font-size:14px;margin-bottom:18px}
+  .form-error.show{display:block}
+  .price-card{max-width:680px;margin:54px auto 0;text-align:center;background:linear-gradient(160deg,var(--ink-2),var(--ink));color:#eef0ff;border-radius:26px;padding:56px 44px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .price-card::before{content:"";position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:340px;height:340px;border-radius:50%;background:rgba(217,164,65,.12)}
+  .price-card h3{font-size:28px;color:#fff;margin-bottom:14px;position:relative}
+  .price-card p{color:#c6cbe8;max-width:480px;margin:0 auto 30px;position:relative}
+  .price-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative}
+  .founder-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:center}
+  .founder-avatar{width:130px;height:130px;border-radius:50%;margin-bottom:26px;background:linear-gradient(140deg,var(--gold),#b07f22);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:44px;font-weight:700;color:var(--ink)}
+  .founder-quote{font-family:'Fraunces',serif;font-size:clamp(21px,2.6vw,28px);line-height:1.4;color:#fff}
+  .founder-quote em{color:var(--gold-soft);font-style:normal}
+  .founder-sign{margin-top:24px;color:#aab0d6;font-size:14.5px}
+  .founder-sign strong{color:#fff;display:block;font-size:16px}
+  .faq-list{max-width:760px;margin:54px auto 0}
+  .faq-item{background:var(--paper);border:1px solid var(--line);border-radius:16px;margin-bottom:12px;overflow:hidden}
+  .faq-q{width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:22px 26px;font-family:'Inter',sans-serif;font-size:16px;font-weight:600;color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .faq-q .plus{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:rgba(217,164,65,.15);color:var(--gold);font-weight:800;display:flex;align-items:center;justify-content:center;transition:transform .25s}
+  .faq-item.open .plus{transform:rotate(45deg)}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .faq-a p{padding:0 26px 22px;color:var(--muted);font-size:15px}
+  .cta-band{text-align:center;padding:110px 24px}
+  .cta-band h2{font-size:clamp(32px,4.6vw,52px);color:#fff;margin-bottom:18px}
+  .cta-band p{color:#aab0d6;margin-bottom:36px;font-size:17px}
+  footer{background:#0e1126;color:#8b91b8;padding:56px 0 34px;font-size:14px}
+  .foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;margin-bottom:40px}
+  .foot-grid .logo{color:#fff}
+  .foot-grid h4{color:#fff;font-size:14px;margin-bottom:14px;letter-spacing:.06em;text-transform:uppercase}
+  .foot-grid a{display:block;color:#8b91b8;text-decoration:none;padding:4px 0;transition:color .15s}
+  .foot-grid a:hover{color:var(--gold-soft)}
+  .foot-legal{border-top:1px solid rgba(238,240,255,.1);padding-top:26px;font-size:12.5px;color:#666c94;line-height:1.7}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(14,17,38,.72);backdrop-filter:blur(6px);z-index:400;display:none;align-items:center;justify-content:center;padding:20px}
+  .modal-backdrop.open{display:flex}
+  .modal{background:var(--paper);border-radius:24px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto;padding:44px;position:relative;animation:pop .25s ease}
+  @keyframes pop{from{transform:translateY(18px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+  .modal-x{position:absolute;top:18px;right:18px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:16px;color:var(--muted)}
+  .modal h3{font-size:26px;margin-bottom:6px}
+  .modal .m-sub{color:var(--muted);font-size:14.5px;margin-bottom:26px}
+  .q-progress{height:6px;background:var(--line);border-radius:99px;margin-bottom:30px;overflow:hidden}
+  .q-progress-bar{height:100%;background:var(--gold);border-radius:99px;transition:width .3s ease;width:0}
+  .q-step-label{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+  .q-question{font-family:'Fraunces',serif;font-size:23px;margin-bottom:20px;line-height:1.25}
+  .q-nav{display:flex;justify-content:space-between;gap:12px;margin-top:28px}
+  .q-review-list{display:grid;gap:10px;margin:10px 0 6px}
+  .q-review-item{background:#fdfcfa;border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:14px}
+  .q-review-item strong{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
+  .success-icon{width:74px;height:74px;border-radius:50%;background:rgba(46,125,78,.12);color:#2e7d4e;display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 22px}
+  .chat-fab{position:fixed;bottom:24px;right:24px;z-index:300;width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:var(--ink);color:var(--gold);font-size:26px;box-shadow:0 14px 34px -10px rgba(20,24,51,.5);transition:transform .18s;display:flex;align-items:center;justify-content:center}
+  .chat-fab:hover{transform:scale(1.08)}
+  .chat-panel{position:fixed;bottom:96px;right:24px;z-index:300;width:min(380px,calc(100vw - 32px));height:520px;max-height:calc(100vh - 130px);background:var(--paper);border-radius:20px;box-shadow:0 30px 70px -20px rgba(20,24,51,.45);display:none;flex-direction:column;overflow:hidden;border:1px solid var(--line)}
+  .chat-panel.open{display:flex;animation:pop .22s ease}
+  .chat-head{background:var(--ink);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px}
+  .chat-avatar{width:38px;height:38px;border-radius:50%;background:var(--gold);color:var(--ink);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:17px}
+  .chat-head strong{display:block;font-size:15px}
+  .chat-head span{font-size:12px;color:#9fe0b1}
+  .chat-body{flex:1;overflow-y:auto;padding:18px;background:#f6f4ef;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:82%;padding:12px 15px;border-radius:16px;font-size:14px;line-height:1.55;white-space:pre-line}
+  .msg.bot{background:var(--paper);border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
+  .msg.user{background:var(--ink);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+  .chat-suggest{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 10px;background:#f6f4ef}
+  .chat-suggest button{font-size:12px;font-weight:600;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer;color:var(--ink-2);transition:.15s;font-family:'Inter',sans-serif}
+  .chat-suggest button:hover{border-color:var(--gold);color:var(--gold)}
+  .chat-input{display:flex;gap:10px;padding:14px;border-top:1px solid var(--line);background:#fff}
+  .chat-input input{flex:1;border:1.5px solid var(--line);border-radius:999px;padding:11px 18px;font-size:14px;font-family:'Inter',sans-serif}
+  .chat-input input:focus{outline:none;border-color:var(--gold)}
+  .chat-input button{width:44px;height:44px;border-radius:50%;border:none;background:var(--gold);color:var(--ink);font-size:17px;cursor:pointer;flex:0 0 auto;transition:.15s}
+  .chat-input button:hover{background:var(--gold-soft)}
+  .typing{display:inline-flex;gap:4px;padding:6px 2px}
+  .typing i{width:6px;height:6px;border-radius:50%;background:#b9bdd6;animation:blink 1.1s infinite}
+  .typing i:nth-child(2){animation-delay:.18s}.typing i:nth-child(3){animation-delay:.36s}
+  @keyframes blink{0%,70%,100%{opacity:.3}35%{opacity:1}}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.visible{opacity:1;transform:none}
+  @media (max-width:960px){.hero-grid{grid-template-columns:1fr;gap:44px}.steps{grid-template-columns:1fr}.svc-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr);gap:36px}.founder-grid{grid-template-columns:1fr;gap:36px}.foot-grid{grid-template-columns:1fr;gap:30px}}
+  @media (max-width:760px){.nav-links{position:fixed;top:72px;left:0;right:0;background:var(--cream);flex-direction:column;align-items:flex-start;padding:22px 24px;gap:18px;border-bottom:1px solid var(--line);display:none}.nav-links.open{display:flex}.burger{display:block}.form-grid{grid-template-columns:1fr}.order-shell{padding:32px 24px}.modal{padding:32px 24px}.section{padding:72px 0}.hero{padding-top:120px}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap nav-inner">
+    <a href="#top" class="logo">theproject<span>gurung</span></a>
+    <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#services">Services</a></li>
+      <li><a href="#order">Order</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#responses">Responses</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#order" class="btn btn-gold">Start My Order</a></li>
+    </ul>
+  </div>
+</nav>
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow" data-hero="1">Human Experts · Experienced Team</span>
+      <h1 data-hero="2">Your Thesis, <em>Finished in 24 Hours.</em></h1>
+      <p class="lead" data-hero="3">Upload your Chapters 1-3 - a human expert writes your <strong>remaining chapters</strong> and delivers within <strong>24 hours</strong>. Real, verifiable citations. Every discipline. Every level.</p>
+      <div class="hero-ctas" data-hero="4">
+        <a href="#order" class="btn btn-gold">Start My Order →</a>
+        <button class="btn btn-ghost" onclick="openChat()">Chat with the Assistant</button>
+      </div>
+      <div class="trust-chips" data-hero="5">
+        <span class="chip">24 Hour Delivery</span>
+        <span class="chip">Real Verified Citations</span>
+        <span class="chip">All Disciplines</span>
+        <span class="chip">All Levels</span>
+      </div>
+    </div>
+    <aside class="hero-card" data-hero="5">
+      <h3>How your order flows</h3>
+      <ol>
+        <li><strong>You submit</strong> Upload Chapters 1-3 or choose a service and tell us what you need.</li>
+        <li><strong>We get to work</strong> Our expert team analyzes your method and style and prepares the draft.</li>
+        <li><strong>Delivery in 24 hours</strong> Polished chapters in your citation style. Pay only after you approve.</li>
+      </ol>
+    </aside>
+  </div>
+</header>
+<section class="stats">
+  <div class="wrap stats-grid">
+    <div><div class="stat-num" data-count="24" data-suffix=" hrs">0</div><div class="stat-label">Average delivery time</div></div>
+    <div><div class="stat-num" data-count="100" data-suffix="%">0</div><div class="stat-label">Real, verifiable references</div></div>
+    <div><div class="stat-num" data-count="50" data-suffix="+">0</div><div class="stat-label">Disciplines covered</div></div>
+    <div><div class="stat-num" data-count="3" data-suffix=" levels">0</div><div class="stat-label">Undergrad · Master's · PhD</div></div>
+  </div>
+</section>
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">How It Works</span>
+      <h2 class="section-title">Three steps. One day. Done.</h2>
+      <p class="section-sub">No black-box bots. Every order is handled by a real expert and our experienced team accelerates research and drafting behind the scenes.</p>
+    </div>
+    <div class="steps">
+      <div class="step-card reveal"><div class="step-num">01</div><h3>Submit your request</h3><p>Upload your existing Chapters 1-3 PDF or DOCX or pick a service and give instructions.</p></div>
+      <div class="step-card reveal"><div class="step-num">02</div><h3>Expert team gets to work</h3><p>We read your methodology and style, analyze any data, and prepare the draft in your citation format.</p></div>
+      <div class="step-card reveal"><div class="step-num">03</div><h3>Receive in 24 hours</h3><p>Your polished chapters arrive within 24 hours. Express delivery is available for an extra fee.</p></div>
+    </div>
+  </div>
+</section>
+<section class="section dark" id="services">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">Services</span>
+      <h2 class="section-title">Pick your track</h2>
+      <p class="section-sub">Have the first half ready? We finish it. Starting from scratch? We build everything.</p>
+    </div>
+    <div class="svc-grid">
+      <div class="svc-card reveal">
+        <span class="svc-tag">Most Popular</span>
+        <h3>Chapters 4-5 Completion</h3>
+        <p class="desc">You upload Chapters 1-3. We write results, analysis and conclusions that continue your work.</p>
+        <ul>
+          <li>Chapter 4 - Results, Data Analysis and Discussion</li>
+          <li>Chapter 5 - Summary, Conclusions and Recommendations</li>
+          <li>Tables, figures and statistical presentation</li>
+          <li>Simulated data clearly labeled if you have none</li>
+          <li>Delivery in 24 hours - express available</li>
+        </ul>
+        <a href="#order" class="btn btn-gold" onclick="pickService('b')">Order Chapters 4-5</a>
+      </div>
+      <div class="svc-card alt reveal">
+        <span class="svc-tag">From Scratch</span>
+        <h3>Full Thesis · Chapters 1-5</h3>
+        <p class="desc">Answer our guided questionnaire and we build your entire thesis from problem to recommendations.</p>
+        <ul>
+          <li>Chapter 1 - Introduction and Background</li>
+          <li>Chapter 2 - Review of Related Literature</li>
+          <li>Chapter 3 - Methodology and Research Design</li>
+          <li>Chapters 4-5 - Results through Recommendations</li>
+          <li>Real, verifiable references</li>
+          <li>Delivery in 24 hours - express available</li>
+        </ul>
+        <a href="#order" class="btn btn-ghost" onclick="pickService('c')">Start Full Thesis</a>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="section" id="order">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">Place Your Order</span>
+      <h2 class="section-title">Tell us what you need</h2>
+      <p class="section-sub">Fill this in and it goes straight to the founder. You will hear back within minutes and delivery follows within 24 hours.</p>
+    </div>
+    <div class="order-shell reveal">
+      <div class="form-error" id="formError"></div>
+      <form id="orderForm" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="f-name">Full name <span class="req">*</span></label>
+            <input type="text" id="f-name" name="name" required placeholder="e.g. Amina Yusuf" />
+          </div>
+          <div class="field">
+            <label for="f-email">Email <span class="req">*</span></label>
+            <input type="email" id="f-email" name="email" required placeholder="you@university.edu" />
+          </div>
+          <div class="field">
+            <label for="f-whatsapp">WhatsApp / phone <span class="req">*</span></label>
+            <input type="tel" id="f-whatsapp" name="whatsapp" required placeholder="+234 ..." />
+          </div>
+          <div class="field">
+            <label for="f-level">Academic level <span class="req">*</span></label>
+            <select id="f-level" name="level" required>
+              <option value="">Select level...</option>
+              <option>Undergraduate</option>
+              <option>Master's</option>
+              <option>PhD</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-discipline">Discipline / field <span class="req">*</span></label>
+            <input type="text" id="f-discipline" name="discipline" list="disciplines" required placeholder="e.g. Business Administration" />
+            <datalist id="disciplines">
+              <option value="Business Administration"></option>
+              <option value="Computer Science"></option>
+              <option value="Nursing"></option>
+              <option value="Education"></option>
+              <option value="Engineering"></option>
+              <option value="Economics"></option>
+              <option value="Psychology"></option>
+              <option value="Public Health"></option>
+              <option value="Accounting & Finance"></option>
+              <option value="Law"></option>
+              <option value="Sociology"></option>
+              <option value="Agriculture"></option>
+              <option value="Political Science"></option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="f-urgency">How urgent? <span class="req">*</span></label>
+            <select id="f-urgency" name="urgency" required>
+              <option value="">Select...</option>
+              <option>Standard - within 24 hours</option>
+              <option>Express - as fast as possible (extra fee)</option>
+              <option>Flexible - today is fine</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>Service type <span class="req">*</span></label>
+            <div class="radio-row">
+              <label class="radio-card">
+                <input type="radio" name="service" value="Chapters 1-3 Only" id="svc-1" checked />
+                <div class="rc-body"><strong>Chapters 1-3 Only</strong><span>Upload Chapters 1-3 for editing and formatting</span></div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="service" value="Chapters 4-5 Completion" id="svc-a" />
+                <div class="rc-body"><strong>Chapters 4-5 Completion</strong><span>I have Chapters 1-3 written. Finish my thesis.</span></div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="service" value="Full Thesis Chapters 1-5" id="svc-b" />
+                <div class="rc-body"><strong>Full Thesis - Ch 1-5</strong><span>Starting from scratch. Take the guided questionnaire.</span></div>
+              </label>
+            </div>
+          </div>
+          <div class="field full" id="uploadBlock">
+            <div class="conditional">
+              <label for="f-files">Upload your Chapters 1-3 PDF or DOCX <span class="req">*</span></label>
+              <input type="file" id="f-files" name="files" accept=".pdf,.doc,.docx" multiple />
+              <p class="file-note" id="fileNote">Upload all available chapters. If files are too large to attach, submit anyway and send them on WhatsApp.</p>
+            </div>
+          </div>
+          <div class="field full" id="quizBlock" style="display:none">
+            <div class="conditional">
+              <strong>Guided Thesis Questionnaire</strong>
+              <p class="file-note">Answer a few questions so we can build Chapters 1-5 around your idea.</p>
+              <button type="button" class="btn btn-gold" id="openQuiz" style="margin-top:12px">Start the Questionnaire →</button>
+              <div style="margin-top:14px"><span class="q-badge" id="quizBadge">✓ Questionnaire attached</span></div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-citation">Citation style your university uses <span class="req">*</span></label>
+            <select id="f-citation" name="citation" required>
+              <option value="">We always ask - select yours...</option>
+              <option>APA 7</option>
+              <option>MLA 9</option>
+              <option>Harvard</option>
+              <option>Chicago</option>
+              <option>IEEE</option>
+              <option>Other (specify below)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-citation-other">If Other, specify</label>
+            <input type="text" id="f-citation-other" name="citation_other" placeholder="e.g. Vancouver, university custom" />
+          </div>
+          <div class="field full">
+            <label for="f-instructions">Special instructions</label>
+            <textarea id="f-instructions" name="instructions" placeholder="University template, word count, supervisor notes, dataset available or not, deadline context"></textarea>
+          </div>
+          <div class="field full">
+            <label class="check-row"><input type="checkbox" name="data_ack" id="f-dataack" required /> <span>I understand that if I don't provide a dataset, realistic simulated data will be formulated for Chapter 4 and clearly labeled as simulated.</span></label>
+          </div>
+          <div class="field full">
+            <label class="check-row"><input type="checkbox" name="integrity" id="f-integrity" required /> <span>I will use the delivered work as a reference or draft in line with my institution's academic integrity policy.</span></label>
+          </div>
+          <input type="text" name="company" class="honeypot" tabindex="-1" autocomplete="off" />
+          <input type="hidden" name="questionnaire" id="f-quiz" />
+        </div>
+        <div style="margin-top:30px">
+          <button type="submit" class="btn btn-gold" id="submitBtn" style="width:100%;padding:18px">Submit My Request — Delivery Within 24 Hours →</button>
+          <p class="file-note center" style="margin-top:12px">Your request goes directly to the founder. No payment now - you pay only after you approve the delivery.</p>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+<section class="section dark" id="pricing">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">Pricing & Payment</span>
+      <h2 class="section-title">Fair. Confirmed upfront. Pay after approval.</h2>
+    </div>
+    <div class="price-card reveal">
+      <h3>Transparent pricing examples</h3>
+      <p>Every project is priced individually but here are common rates. Final quotes are given before work begins. You pay after you review and approve the delivery.</p>
+      <ul style="list-style:none;margin:18px 0 6px;padding:0;color:#c6cbe8">
+        <li>Standard department - ₦50,000 for Chapters 1-5</li>
+        <li>Law department - ₦100,000 for Chapters 1-5</li>
+        <li>Chapters 1-3 only - ₦30,000</li>
+        <li>Chapters 4-5 only - ₦30,000</li>
+        <li>Response gathering via Google Forms - ₦10,000</li>
+      </ul>
+      <p style="color:#c6cbe8;max-width:540px;margin:0 auto 18px">Express delivery is available for an additional fee. Final pricing depends on discipline, length and urgency.</p>
+      <div class="price-ctas">
+        <a href="#" class="btn btn-gold" id="waPricing">💬 WhatsApp the Founder</a>
+        <a href="#" class="btn btn-ghost-light" id="emailPricing">✉️ Email the Founder</a>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="section" id="responses">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">Response Gathering</span>
+      <h2 class="section-title">We can gather real responses for your study</h2>
+      <p class="section-sub">Need survey responses for Chapter 4? We build a Google Form, collect responses and deliver the cleaned dataset and analysis. Standard fee ₦10,000 per study - contact the founder to confirm scope.</p>
+      <div style="margin-top:18px"><a href="#" class="btn btn-gold" id="waResponses">Request Response Gathering on WhatsApp</a></div>
+    </div>
+  </div>
+</section>
+<section class="section dark" style="background:var(--ink-2)">
+  <div class="wrap founder-grid">
+    <div class="reveal"><div class="founder-avatar">tg</div></div>
+    <div class="reveal">
+      <span class="eyebrow">A Note From the Founder</span>
+      <p class="founder-quote">"Every order is personally handled by a real expert. Our team has 5 years experience and booking is easy. We provide real citations and the exact format your university needs."</p>
+      <p class="founder-sign"><strong>Founder, theprojectgurung</strong> Replies within minutes and delivers within 24 hours.</p>
+    </div>
+  </div>
+</section>
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">FAQ</span>
+      <h2 class="section-title">Questions answered straight</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item"><button class="faq-q">How can you deliver in 24 hours?<span class="plus">+</span></button><div class="faq-a"><p>Our expert team handles methodology, drafting and referencing quickly and reliably. The 24 hour clock starts when we confirm your order on WhatsApp or email.</p></div></div>
+      <div class="faq-item"><button class="faq-q">Are the references real?<span class="plus">+</span></button><div class="faq-a"><p>Yes. Every citation comes from actual published, verifiable literature and is formatted to your chosen style.</p></div></div>
+      <div class="faq-item"><button class="faq-q">What if I don't have any data for Chapter 4?<span class="plus">+</span></button><div class="faq-a"><p>We can formulate realistic, methodology consistent simulated data and clearly label it as simulated. If you have real data such as Excel or CSV, upload it and we will analyze it instead. We can also gather real responses for a fee.</p></div></div>
+      <div class="faq-item"><button class="faq-q">Is this legal and ethical to use?<span class="plus">+</span></button><div class="faq-a"><p>We deliver reference drafts. Customers confirm they will use the work in line with their institution's academic integrity policy. How you use it is your responsibility.</p></div></div>
+      <div class="faq-item"><button class="faq-q">Which disciplines and levels do you cover?<span class="plus">+</span></button><div class="faq-a"><p>All disciplines at undergraduate, master's and PhD levels. Our team adapts to your field's conventions.</p></div></div>
+      <div class="faq-item"><button class="faq-q">What file formats do you accept and deliver?<span class="plus">+</span></button><div class="faq-a"><p>Upload Chapters 1-3 as PDF or DOCX. Deliveries come back as polished DOCX formatted to your university template.</p></div></div>
+    </div>
+  </div>
+</section>
+<section class="cta-band dark section dark">
+  <div class="wrap reveal">
+    <h2>Your Chapter 4-5 deadline is coming. We can help.</h2>
+    <p>Upload what you have and we will take it from here.</p>
+    <a href="#order" class="btn btn-gold" style="padding:18px 40px;font-size:17px">Start My Order →</a>
+  </div>
+</section>
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a href="#top" class="logo">theproject<span>gurung</span></a>
+        <p style="margin-top:14px;max-width:320px">Human led thesis completion. Real citations, every discipline, delivered in 24 hours.</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <a href="#how">How It Works</a>
+        <a href="#services">Services</a>
+        <a href="#order">Place an Order</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#responses">Responses</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <a href="#" id="waFooter">WhatsApp the Founder</a>
+        <a href="#" id="emailFooter">Email the Founder</a>
+        <a href="#order">Start an Order</a>
+      </div>
+    </div>
+    <div class="foot-legal">
+      © <span id="year"></span> theprojectgurung. All rights reserved. Delivered work is provided as a reference and draft for research and study purposes; customers are responsible for using it in accordance with their institution's academic integrity policy. All citations are drawn from real published sources.
+    </div>
+  </div>
+</footer>
+<div class="modal-backdrop" id="quizModal">
+  <div class="modal">
+    <button class="modal-x" onclick="closeQuiz()">✕</button>
+    <h3>Guided Thesis Questionnaire</h3>
+    <p class="m-sub">A quick conversation about your research - we turn your answers into Chapters 1-5.</p>
+    <div class="q-progress"><div class="q-progress-bar" id="quizBar"></div></div>
+    <div id="quizBody"></div>
+  </div>
+</div>
+<div class="modal-backdrop" id="successModal">
+  <div class="modal center">
+    <div class="success-icon">✓</div>
+    <h3>Request received!</h3>
+    <p class="m-sub" id="successMsg" style="text-align:center">Our expert is on it - expect your delivery within 24 hours. We'll contact you shortly to confirm.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px">
+      <a href="#" class="btn btn-gold" id="waSuccess">Send files on WhatsApp</a>
+      <button class="btn btn-ghost" onclick="closeSuccess()">Done</button>
+    </div>
+  </div>
+</div>
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" aria-label="Chat with Assistant">✦</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-head">
+    <div class="chat-avatar">A</div>
+    <div><strong>Assistant · theprojectgurung</strong><span>● Online — replies instantly</span></div>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-suggest">
+    <button onclick="quickAsk('How does the 24 hour delivery work?')">24 hour delivery?</button>
+    <button onclick="quickAsk('Are the citations real?')">Real citations?</button>
+    <button onclick="quickAsk('How do I pay?')">How do I pay?</button>
+    <button onclick="quickAsk('I have no data, can you help?')">No data?</button>
+  </div>
+  <div class="chat-input">
+    <input type="text" id="chatInput" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendChat()" />
+    <button onclick="sendChat()" aria-label="Send">➤</button>
+  </div>
+</div>
+<script>
+const CONFIG = {
+  FOUNDER_EMAIL:    "founder@theprojectgurung.com",
+  FOUNDER_WHATSAPP: "2348070725882",
+  FORM_ENDPOINT:    ""
+};
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const waLink = text => "https://wa.me/" + CONFIG.FOUNDER_WHATSAPP + "?text=" + encodeURIComponent(text);
+document.getElementById("year").textContent = new Date().getFullYear();
+["waPricing","waFooter","waResponses","waSuccess"].forEach(id => { const el = document.getElementById(id); if (el) el.href = waLink("Hi! I have a question about theprojectgurung."); });
+["emailPricing","emailFooter"].forEach(id => { const el = document.getElementById(id); if (el) el.href = "mailto:" + CONFIG.FOUNDER_EMAIL + "?subject=theprojectgurung%20—%20Question"; });
+const burger = $("#burger"), navLinks = $("#navLinks"); burger.addEventListener("click", () => navLinks.classList.toggle("open")); navLinks.addEventListener("click", e => { if (e.target.tagName === "A") navLinks.classList.remove("open"); });
+if ("IntersectionObserver" in window) { const io = new IntersectionObserver(entries => { entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add("visible"); io.unobserve(en.target); } }); }, { threshold: .12 }); $$(".reveal").forEach(el => io.observe(el)); } else { $$(".reveal").forEach(el => el.classList.add("visible")); }
+const statIO = new IntersectionObserver(entries => { entries.forEach(en => { if (!en.isIntersecting) return; const el = en.target, target = +el.dataset.count, suffix = el.dataset.suffix || ""; const t0 = performance.now(), dur = 1400; (function tick(t){ const p = Math.min((t - t0) / dur, 1); el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + suffix; if (p < 1) requestAnimationFrame(tick); })(t0); statIO.unobserve(el); }); }, { threshold: .5 }); $$(".stat-num").forEach(el => statIO.observe(el));
+$$('.faq-item').forEach(item => { const q = item.querySelector('.faq-q'), a = item.querySelector('.faq-a'); q.addEventListener('click', () => { const open = item.classList.contains('open'); $$('.faq-item.open').forEach(o => { o.classList.remove('open'); o.querySelector('.faq-a').style.maxHeight = null; }); if (!open) { item.classList.add('open'); a.style.maxHeight = a.scrollHeight + 'px'; } }); });
+const svcA = $("#svc-a"), svcB = $("#svc-b"), svc1 = $("#svc-1"), uploadBlock = $("#uploadBlock"), quizBlock = $("#quizBlock"); function refreshServiceUI(){ const isFull = svcB && svcB.checked; const needsUpload = (svcA && svcA.checked) || (svc1 && svc1.checked); uploadBlock.style.display = needsUpload ? "" : "none"; quizBlock.style.display = isFull ? "" : "none"; }
+['svc-1','svc-a','svc-b'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', refreshServiceUI); }); function pickService(which){ if (which === 'b') { $('#svc-b').checked = true; } else if (which === 'a') { $('#svc-a').checked = true; } else { $('#svc-1').checked = true; } refreshServiceUI(); }
+const QUIZ = [ { id:'topic', q:'What is your research topic or working title?', type:'text', ph:'e.g. Impact of Social Media on Academic Performance of Undergraduates', req:true }, { id:'level', q:'Which academic level is this for?', type:'select', opts:['Undergraduate','Master\'s','PhD','Other'] }, { id:'discipline', q:'What field or discipline?', type:'text', ph:'e.g. Nursing, Computer Science, Business Administration' }, { id:'problem', q:'Describe your research problem in a sentence or two.', type:'textarea', ph:'What issue or gap does your study address?' }, { id:'objectives', q:'List 3-5 research objectives (one per line).', type:'textarea', ph:'1. To determine…\n2. To examine…' }, { id:'questions', q:'List your research questions (one per line).', type:'textarea', ph:'1. What is the…?' }, { id:'scope', q:'What is your scope - what is included and what is excluded?', type:'textarea', ph:'e.g. Final-year students of one university, 2024-2025' }, { id:'method', q:'Preferred methodology?', type:'radio', opts:['Quantitative','Qualitative','Mixed methods','Not sure - recommend one'] }, { id:'significance', q:'Who benefits from this study and why does it matter?', type:'textarea', ph:'e.g. Students, lecturers, policymakers' }, { id:'length', q:'Target length and timeline?', type:'text', ph:'e.g. 60 pages, needed within 2 weeks' }, { id:'style', q:'Which citation style does your university require?', type:'select', opts:['APA 7','MLA 9','Harvard','Chicago','IEEE','Other (specify in order notes)'] } ];
+let quizIdx = 0; const quizAnswers = {}; function openQuiz(){ quizIdx = 0; $('#quizModal').classList.add('open'); renderQuiz(); } function closeQuiz(){ $('#quizModal').classList.remove('open'); } if ($('#openQuiz')) $('#openQuiz').addEventListener('click', openQuiz);
+function renderQuiz(){ const bar = $('#quizBar'), body = $('#quizBody'); const isReview = quizIdx >= QUIZ.length; bar.style.width = (isReview ? 100 : (quizIdx / QUIZ.length) * 100) + "%"; if (isReview) { body.innerHTML = '<div class="q-step-label">Step ' + QUIZ.length + ' of ' + QUIZ.length + ' · Review</div>' + '<div class="q-question">Looks good - ready to attach this to your order?</div>' + '<div class="q-review-list">' + QUIZ.map(s => '<div class="q-review-item"><strong>' + s.q.replace(/<[^>]*>/g,"") + '</strong>' + ((quizAnswers[s.id] || "").toString().replace(/\n/g,"<br>") || '<em style="color:#999">—</em>') + '</div>').join('') + '</div>' + '<div class="q-nav"><button class="btn btn-ghost" onclick="quizPrev()">← Back</button>' + '<button class="btn btn-gold" onclick="quizFinish()">Attach to My Order ✓</button></div>'; return; }
+  const s = QUIZ[quizIdx]; let inputHtml = ''; if (s.type === 'text') inputHtml = '<input type="text" id="qInput" placeholder="' + s.ph + '" value="' + (quizAnswers[s.id] || '').replace(/"/g,'&quot;') + '" />'; if (s.type === 'textarea') inputHtml = '<textarea id="qInput" placeholder="' + (s.ph || '') + '">' + (quizAnswers[s.id] || '') + '</textarea>'; if (s.type === 'select') inputHtml = '<select id="qInput"><option value="">Select...</option>' + s.opts.map(o => '<option' + (quizAnswers[s.id] === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>'; if (s.type === 'radio') inputHtml = '<div class="radio-row" style="flex-direction:column">' + s.opts.map(o => '<label class="radio-card" style="min-width:0"><input type="radio" name="qRadio" value="' + o + '"' + (quizAnswers[s.id] === o ? ' checked' : '') + ' /><div class="rc-body"><strong>' + o + '</strong></div></label>').join('') + '</div>';
+  body.innerHTML = '<div class="q-step-label">Question ' + (quizIdx + 1) + ' of ' + QUIZ.length + '</div>' + '<div class="q-question">' + s.q + '</div>' + inputHtml + '<div class="q-nav"><button class="btn btn-ghost" onclick="quizPrev()">' + (quizIdx === 0 ? 'Cancel' : '← Back') + '</button>' + '<button class="btn btn-gold" onclick="quizNext()">' + (quizIdx === QUIZ.length - 1 ? 'Review →' : 'Next →') + '</button></div>';
+  const inp = $('#qInput'); if (inp && s.type !== 'radio') { inp.focus(); inp.addEventListener('keydown', e => { if (e.key === 'Enter' && s.type === 'text') quizNext(); }); }
+}
+function captureQuizInput(){ const s = QUIZ[quizIdx]; if (s.type === 'radio') { const r = document.querySelector('input[name="qRadio"]:checked'); quizAnswers[s.id] = r ? r.value : ''; } else { const el = $('#qInput'); quizAnswers[s.id] = el ? el.value.trim() : ''; } }
+function quizNext(){ captureQuizInput(); quizIdx++; renderQuiz(); }
+function quizPrev(){ if (quizIdx === 0) { closeQuiz(); return; } captureQuizInput(); quizIdx--; renderQuiz(); }
+function quizFinish(){ $('#f-quiz').value = JSON.stringify(quizAnswers, null, 2); $('#quizBadge').classList.add('show'); closeQuiz(); document.getElementById('f-name').focus(); }
+const orderForm = $('#orderForm'), formError = $('#formError'); function showError(msg){ formError.textContent = msg; formError.classList.add('show'); formError.scrollIntoView({behavior:'smooth', block:'center'}); }
+orderForm.addEventListener('submit', async e => { e.preventDefault(); formError.classList.remove('show'); if (orderForm.company.value) return; const required = ['f-name','f-email','f-whatsapp','f-level','f-discipline','f-urgency','f-citation']; for (const id of required) { const el = document.getElementById(id); if (!el.value.trim()) return showError('Please fill in every required field marked *.'); } if (!$('#f-email').value.includes('@')) return showError('That email does not look right - check and try again.'); const service = document.querySelector('input[name="service"]:checked'); if (service && service.value.includes('Chapters 4-5') && !$('#f-files').files.length && !CONFIG.FORM_ENDPOINT) return showError('For Chapters 4-5, attach your Chapters 1-3 files or send them on WhatsApp after submitting.'); if (service && service.value.includes('Full Thesis') && !$('#f-quiz').value) return showError('Please complete the short questionnaire so we can build your thesis.'); if (!$('#f-dataack').checked || !$('#f-integrity').checked) return showError('Please tick both confirmation boxes to continue.'); const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'Sending your request...'; const fd = new FormData(orderForm); const summary = 'NEW ORDER - theprojectgurung\n────────────────────────\nName: ' + fd.get('name') + '\nEmail: ' + fd.get('email') + '\nWhatsApp: ' + fd.get('whatsapp') + '\nLevel: ' + fd.get('level') + '\nDiscipline: ' + fd.get('discipline') + '\nService: ' + fd.get('service') + '\nCitation: ' + fd.get('citation') + (fd.get('citation_other') ? ' (' + fd.get('citation_other') + ')' : '') + '\nUrgency: ' + fd.get('urgency') + '\nInstructions: ' + (fd.get('instructions') || '—') + '\n' + (fd.get('questionnaire') ? '\nQUESTIONNAIRE:\n' + fd.get('questionnaire') : ''); let delivered = false; if (CONFIG.FORM_ENDPOINT) { try { const res = await fetch(CONFIG.FORM_ENDPOINT, { method: 'POST', body: fd, headers: { Accept: 'application/json' } }); delivered = res.ok; } catch (err) { delivered = false; } } if (!delivered) window.open(waLink(summary), '_blank'); $('#successMsg').textContent = delivered ? 'Your request is in the founder\'s inbox - expect a reply within minutes and delivery within 24 hours. We will contact you at ' + fd.get('email') + ' to confirm payment.' : 'Your order was handed to WhatsApp - hit send in the chat that just opened, and expect delivery within 24 hours. We will confirm payment by email (' + fd.get('email') + ').'; document.getElementById('waSuccess').href = waLink('Hi! I just submitted an order on theprojectgurung. Here are my Chapter 1-3 files:'); $('#successModal').classList.add('open'); btn.disabled = false; btn.textContent = 'Submit My Request - Delivery Within 24 Hours →'; orderForm.reset(); refreshServiceUI(); $('#quizBadge').classList.remove('show'); });
+function closeSuccess(){ $('#successModal').classList.remove('open'); }
+$$('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m && m.id !== 'successModal') m.classList.remove('open'); }));
+const chatPanel = $('#chatPanel'), chatBody = $('#chatBody'); let chatStarted = false; const FAQ_BOT = [ { keys:['price','cost','pay','payment','how much','fee'], a:'Pricing is quoted per project before we start - based on level length and urgency. You pay only AFTER you approve the delivery. Tap WhatsApp to get a quote.' }, { keys:['24','hour','deliver','time','deadline'], a:'Yes - 24 hours standard delivery. Express is available for an extra fee.' }, { keys:['citation','reference','cite','source','real'], a:'Every reference is real published and verifiable. We format to your chosen style.' }, { keys:['data','dataset','excel','csv','spss','no data'], a:'No dataset - we can formulate realistic simulated data and clearly label it as simulated. We can also gather real responses for a fee.' }, { keys:['chapter 4','chapter 5','result','conclusion','finish'], a:'For Chapters 4-5 upload your Chapters 1-3. We then write Results Analysis Discussion Conclusions and Recommendations.' }, { keys:['full','scratch','start','chapter 1','questionnaire','from zero','begin'], a:'For a full thesis choose Full Thesis and take our guided questionnaire. We build everything from there.' }, { keys:['legal','ethic','safe','allowed','integrity','cheat'], a:'We deliver reference drafts for study. Customers confirm they will use the work under their institution\'s academic integrity policy.' }, { keys:['human','real person','who','founder','contact','whatsapp','email','talk'], a:'Every order is handled by the founder and our expert team. Reach them via the WhatsApp or email buttons.' }, { keys:['discipline','field','level','phd','master','undergraduate','nursing','engineering','business'], a:'We cover every discipline at undergraduate masters and PhD level.' }, { keys:['format','docx','pdf','word','file'], a:'Upload Chapters 1-3 as PDF or DOCX. Deliveries come back as polished DOCX formatted to your template.' }, { keys:['hi','hello','hey'], a:'Hello! Ask about 24 hour delivery, citations, data handling or pricing.' } ];
+function toggleChat(){ chatPanel.classList.toggle('open'); if (chatPanel.classList.contains('open') && !chatStarted){ chatStarted = true; botSay('Hi I am the assistant. Ask me anything about how we finish your thesis in 24 hours or tap a suggestion below.'); } }
+function openChat(){ if (!chatPanel.classList.contains('open')) toggleChat(); }
+function scrollChat(){ chatBody.scrollTop = chatBody.scrollHeight; }
+function botSay(text){ const d = document.createElement('div'); d.className = 'msg bot'; d.textContent = text; chatBody.appendChild(d); scrollChat(); }
+function userSay(text){ const d = document.createElement('div'); d.className = 'msg user'; d.textContent = text; chatBody.appendChild(d); scrollChat(); }
+function typingOn(){ const d = document.createElement('div'); d.className = 'msg bot'; d.id = 'typing'; d.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; chatBody.appendChild(d); scrollChat(); }
+function typingOff(){ const t = document.getElementById('typing'); if (t) t.remove(); }
+async function answerUser(text){ typingOn(); await new Promise(r => setTimeout(r, 650)); typingOff(); const low = text.toLowerCase(); const hit = FAQ_BOT.find(f => f.keys.some(k => low.includes(k))); botSay(hit ? hit.a : 'Great question - for anything specific the founder answers personally within minutes. Tap the WhatsApp button.'); }
+function sendChat(){ const inp = $('#chatInput'), text = inp.value.trim(); if (!text) return; inp.value = ''; userSay(text); answerUser(text); }
+function quickAsk(text){ openChat(); userSay(text); answerUser(text); }
+</script>
+</body>
+</html>
