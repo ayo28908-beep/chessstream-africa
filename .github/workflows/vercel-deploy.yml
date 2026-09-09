@@ -1,0 +1,44 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - deploy/projectguru
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  vercel-deploy:
+    name: Vercel Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci || true
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./
+
+      - name: Post deployment info
+        run: echo "If the workflow ran, Vercel was triggered. Check Vercel dashboard for deployment URL."
+
+# Notes:
+# - This workflow runs on pushes to `deploy/projectguru`. It requires three repository secrets to be set:
+#   - VERCEL_TOKEN (personal token)
+#   - VERCEL_ORG_ID
+#   - VERCEL_PROJECT_ID
+# - To get Org and Project IDs, open your Vercel project Dashboard > Settings > General > Project ID / Org ID.

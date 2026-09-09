@@ -164,6 +164,7 @@ export default function BroadcastViewer({
     try {
       const res = await fetch(`/api/lichess/round/${roundId}`);
       if (!res.ok) {
+<<<<<<< Updated upstream
         let msg = `Lichess API returned ${res.status}`;
         try {
           const errData = await res.json();
@@ -181,6 +182,24 @@ export default function BroadcastViewer({
     } catch (err) {
       console.error(`[ChessStream] Network error fetching round ${roundId}:`, err);
       setRoundError("Network error while fetching games from Lichess.");
+=======
+        const text = await res.text().catch(() => "");
+        console.error("Lichess round fetch failed", { roundId, status: res.status, body: text });
+        setError(`Failed to load round ${roundId} (Lichess ${res.status})`);
+        return;
+      }
+      const data = await res.json();
+      if (data.games && data.games.length > 0) {
+        setGames(data.games);
+        setError(null);
+      } else {
+        setGames([]);
+        setError(`No games found for round ${roundId}`);
+      }
+    } catch (err) {
+      console.error("Round fetch error:", err, { roundId });
+      setError(`Unable to fetch round ${roundId}: ${String(err)}`);
+>>>>>>> Stashed changes
     }
   }, []);
 

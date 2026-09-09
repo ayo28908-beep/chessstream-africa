@@ -133,9 +133,33 @@ export async function GET(
 
   // Verify the round actually exists (the PGN endpoint is the public probe).
   try {
+<<<<<<< Updated upstream
     const probe = await fetch(`https://lichess.org/api/broadcast/round/${encodeURIComponent(roundId)}.pgn`, {
       headers: { Accept: "application/x-chess-pgn" },
       signal: AbortSignal.timeout(8000),
+=======
+    const res = await fetch(
+      `https://lichess.org/api/broadcast/round/${roundId}.pgn`,
+      { headers: { Accept: "application/x-chess-pgn" } }
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error("Lichess round fetch failed", { roundId, status: res.status, body: text });
+      return NextResponse.json(
+        { error: `Lichess API returned ${res.status}`, detail: text },
+        { status: 502 }
+      );
+    }
+
+    const pgn = await res.text();
+    const games = parsePGNtoGames(pgn);
+
+    return NextResponse.json({
+      roundId,
+      gameCount: games.length,
+      games,
+>>>>>>> Stashed changes
     });
     if (probe.status === 404) {
       return NextResponse.json({ error: "No Lichess broadcast round with that id was found." }, { status: 404 });
