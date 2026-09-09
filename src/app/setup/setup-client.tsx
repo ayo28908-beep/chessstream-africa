@@ -81,10 +81,19 @@ export default function SetupClient() {
   const lastContentRef = useRef("");
 
   // ---------- Folder upload state ----------
+  // webkitdirectory is the only input attribute that hands us the folder
+  // STRUCTURE (subfolder = category). Detect real support instead of assuming.
   const [folderState, setFolderState] = useState<"idle" | "reading" | "uploading" | "done" | "error">("idle");
   const [folderFiles, setFolderFiles] = useState<PendingFile[]>([]);
+  // Files picked BEFORE the broadcast exists — they upload automatically on create.
+  const [stagedFolder, setStagedFolder] = useState<PendingFile[]>([]);
   const [folderResults, setFolderResults] = useState<UploadResult[]>([]);
   const [folderError, setFolderError] = useState<string | null>(null);
+  const [webkitDirSupported] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const input = document.createElement("input");
+    return "webkitdirectory" in input;
+  });
 
   // ---------- Lichess multi-section state ----------
   const [pendingTournament, setPendingTournament] = useState<{ id: string; name: string; rounds: { id: string; name: string }[]; isRound?: boolean } | null>(null);
@@ -204,8 +213,7 @@ export default function SetupClient() {
   // directory-picker API required. Subfolders become categories (U12, U16,
   // Women...) and each PGN file becomes a round.
   const handleFolderPicked = useCallback(async (fileList: FileList | null) => {
-    const id = sessionIdRef.current;
-    if (!id || !fileList || fileList.length === 0) return;
+    if (!fileList || fileList.length === 0) return;
     setFolderState("reading");
     setFolderError(null);
     setFolderResults([]);
@@ -213,11 +221,14 @@ export default function SetupClient() {
     for (const file of Array.from(fileList)) {
       if (!/\.(pgn|txt)$/i.test(file.name)) continue;
       // webkitRelativePath looks like "TournamentFolder/U12/Round1.pgn" —
-      // the first segment is the folder the user picked, drop it.
+      // the first segment is the folder the user picked, drop it, and the
+      // remaining directory chain is the CATEGORY (U12, Senior/U12, ...).
+      // Files directly inside the picked folder land in "Main".
       const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath || "";
-      const parts = rel.split("/").filter(Boolean).slice(1);
-      const category = parts.length >= 2 ? parts.slice(0, -1).join(" / ") : "Main";
-      const round = file.name.replace(/\.(pgn|txt)$/i, "");
+      const relParts = rel.split("/").filter(Boolean);
+      const dirParts = relParts.length > 1 ? relParts.slice(1, -1) : [];
+      const category = dirParts.length > 0 ? dirParts.join(" / ") : "Main";
+      const round = (relParts.length > 1 ? relParts[relParts.length - 1] : file.name).replace(/\.(pgn|txt)$/i, "");
       let text = "";
       try {
         text = await file.text();
@@ -232,11 +243,27 @@ export default function SetupClient() {
       setFolderError("No PGN files found in that folder. Put .pgn files in the folder (subfolders become categories like U12, U16).");
       return;
     }
-    setFolderFiles(files);
+    // Dedupe identical category/round pairs (keeps a re-pick from stacking).
+    const seen = new Set<string>();
+    const unique = files.filter((f) => {
+      const key = `${f.category}/${f.round}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    setFolderFiles(unique);
+    // No session yet? Stage the files — they upload automatically on create.
+    const id = sessionIdRef.current;
+    if (!id) {
+      setStagedFolder(unique);
+      setFolderState("idle");
+      setFolderError(null);
+      return;
+    }
     setFolderState("uploading");
     const results: UploadResult[] = [];
     let failures = 0;
-    for (const f of files) {
+    for (const f of unique) {
       const res = await uploadPgn(id, f.pgn, f.category, f.round);
       if (res.ok) results.push({ category: f.category, round: f.round, games: res.gameCount });
       else failures++;
@@ -291,11 +318,59 @@ export default function SetupClient() {
         setPendingTournament({ id: data.tournament.id, name: data.tournament.name, rounds: data.rounds, isRound: false });
         setSectionLabel(data.tournament.name);
       } else if (res.status === 404) {
-        // Not a tournament — treat the id as a single round. isRound is
-        // important: a round id must NOT be stored as a tournamentId, or the
-        // broadcast validation would try to fetch it as a tournament and fail.
-        setPendingTournament({ id, name: "Round", rounds: [{ id, name: "Linked round" }], isRound: true });
-        setSectionLabel("Main");
+        // Not a tournament — treat the id as a single round, but first try to
+        // resolve it UP to its parent tournament. Lichess has no round JSON
+        // API, so our /api/lichess/round/[id] route reverse-looks-up the
+        // tournament (via the round PGN slug + broadcast list scan). When it
+        // succeeds we can auto-link the whole tournament (all rounds) and any
+        // sibling categories (U12/U16/Open, Finals/Preliminary...) from one
+        // pasted round link. isRound stays true so a bare round id is never
+        // wrongly stored as a tournamentId.
+        let roundResolved = false;
+        try {
+          const roundRes = await fetch(`/api/lichess/round/${encodeURIComponent(id)}`);
+          const roundData = await roundRes.json();
+          if (roundRes.ok && roundData.sections && roundData.sections.length > 0) {
+            if (roundData.sections.length > 1) {
+              // Found sibling categories under a broadcast group — link them all.
+              const sections: { label: string; tournamentId?: string; rounds: { id: string; label: string }[] }[] =
+                roundData.sections.map((s: { label: string; tournamentId?: string; rounds: { id: string; name: string }[] }) => ({
+                  label: s.label,
+                  tournamentId: s.tournamentId || undefined,
+                  rounds: (s.rounds || []).map((r: { id: string; name: string }) => ({ id: r.id, label: r.name })),
+                }));
+              setLinkedSections(sections);
+              setPendingTournament(null);
+              setSectionLabel("");
+              setLichessUrl("");
+              setLichessNote(
+                `That round belongs to \u201C${roundData.group || roundData.tournamentName}\u201D — found ${sections.length} categories with all their rounds and linked them automatically: ` +
+                sections.map((s) => s.label).join(", ") +
+                ". You can rename or remove any below before creating the broadcast."
+              );
+              roundResolved = true;
+            } else if (roundData.sections[0].rounds.length > 1 && roundData.tournamentId) {
+              // The round's tournament has several rounds but no sibling
+              // categories — link the whole tournament as one section so
+              // viewers get every round, not just the one pasted.
+              const s = roundData.sections[0];
+              setPendingTournament({
+                id: roundData.tournamentId,
+                name: roundData.tournamentName || s.label || "Tournament",
+                rounds: s.rounds.map((r: { id: string; name: string }) => ({ id: r.id, name: r.name })),
+                isRound: false,
+              });
+              setSectionLabel(s.label || roundData.tournamentName || "Main");
+              roundResolved = true;
+            }
+          }
+        } catch {
+          // round resolution failed — fall through to single-round flow
+        }
+        if (!roundResolved) {
+          setPendingTournament({ id, name: "Round", rounds: [{ id, name: "Linked round" }], isRound: true });
+          setSectionLabel("Main");
+        }
       } else {
         setError(data.error || "Could not reach Lichess to check that link. Try again in a moment.");
       }
@@ -337,7 +412,21 @@ export default function SetupClient() {
   const createLocal = async () => {
     const id = await createSession("local-pgn");
     if (!id) return;
-    if (pgnText.trim()) {
+    if (stagedFolder.length > 0) {
+      // A folder was picked before creating — upload everything now.
+      setFolderState("uploading");
+      const results: UploadResult[] = [];
+      let failures = 0;
+      for (const f of stagedFolder) {
+        const res = await uploadPgn(id, f.pgn, f.category, f.round);
+        if (res.ok) results.push({ category: f.category, round: f.round, games: res.gameCount });
+        else failures++;
+      }
+      setFolderResults(results);
+      setFolderState("done");
+      if (failures > 0) setFolderError(`${failures} file(s) failed to upload.`);
+      setStagedFolder([]);
+    } else if (pgnText.trim()) {
       lastContentRef.current = pgnText;
       await uploadPgn(id, pgnText, "Main", "Round 1");
     }
@@ -462,9 +551,10 @@ export default function SetupClient() {
           {mode === "local-pgn" && (
             <div style={{ display: "grid", gap: 14 }}>
               <div style={{ fontSize: 13.5, color: "var(--color-text-muted)", lineHeight: 1.6 }}>
-                Your DGT board writes live moves to a PGN file on your desktop. Create the broadcast below, then either
-                pick the file to watch it live, or upload a whole <b>folder</b> — subfolders become categories (U12, U16,
-                Women...) and each PGN file becomes a round viewers can switch between.
+                Your DGT board writes live moves to a PGN file on your desktop. <b>Choose a folder first</b> — subfolders
+                become categories (U12, U16, Women...) and each PGN file becomes a round — then create the broadcast and
+                everything uploads at once. For continuous live updating while the DGT writes moves, run the desktop
+                watcher app (<code style={{ fontFamily: "var(--font-mono)" }}>desktop-watcher/</code>) pointed at the same folder.
               </div>
               <div>
                 <label style={labelStyle}>Paste PGN (optional, works in every browser)</label>
@@ -522,36 +612,44 @@ export default function SetupClient() {
               )}
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={createLocal} disabled={creating || !canCreateLocal} className="btn btn-primary" style={{ padding: "12px 24px" }}>
-                  {creating ? "Creating..." : <><Play size={15} /> Create broadcast</>}
+                  {creating ? (stagedFolder.length > 0 ? `Creating + uploading ${stagedFolder.length} files...` : "Creating...") : <><Play size={15} /> Create broadcast</>}
                 </button>
+                {stagedFolder.length > 0 && (
+                  <span style={{ fontSize: 13, color: "var(--color-accent)", fontWeight: 600 }}>
+                    <Layers size={14} style={{ display: "inline", marginRight: 4, verticalAlign: "-2px" }} />
+                    {stagedFolder.length} PGN file{stagedFolder.length === 1 ? "" : "s"} staged ({[...new Set(stagedFolder.map(f => f.category))].join(", ")}) — uploads on create
+                  </span>
+                )}
+                <label className="btn btn-outline" style={{ padding: "12px 24px", cursor: "pointer" }}>
+                  <Layers size={15} /> Choose folder (categories + rounds)
+                  <input
+                    ref={folderInputRef}
+                    type="file"
+                    multiple
+                    {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                    onChange={(e) => {
+                      handleFolderPicked(e.target.files);
+                      // Reset the value so picking the same folder again re-fires.
+                      e.target.value = "";
+                    }}
+                    style={{ display: "none" }}
+                  />
+                </label>
                 {created && (
                   <button onClick={() => startWatch(sessionIdRef.current || "")} disabled={!fsaSupported} className="btn btn-outline" style={{ padding: "12px 24px" }}>
                     <FolderOpen size={15} /> Watch PGN file
                   </button>
                 )}
-                {created && (
-                  <label className="btn btn-outline" style={{ padding: "12px 24px", cursor: "pointer" }}>
-                    <Layers size={15} /> Upload folder (categories)
-                    <input
-                      ref={folderInputRef}
-                      type="file"
-                      multiple
-                      {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
-                      onChange={(e) => {
-                        handleFolderPicked(e.target.files);
-                        // Reset the value so picking the same folder again re-fires.
-                        e.target.value = "";
-                      }}
-                      style={{ display: "none" }}
-                    />
-                  </label>
-                )}
-                {created && !fsaSupported && (
+                {!webkitDirSupported && (
                   <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                    Folder upload works in every browser. Live file watching (auto-refresh from the DGT file) needs Chrome or Edge.
+                    This browser cannot pick a whole folder. Use Chrome or Edge, or run the desktop watcher app under <code style={{ fontFamily: "var(--font-mono)" }}>desktop-watcher/</code>.
                   </span>
                 )}
               </div>
+              <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                Folder upload sorts subfolders into categories (U12, U16...). For continuous auto-updating while your DGT board writes moves, use the
+                <b> ChessStream desktop watcher</b> (<code style={{ fontFamily: "var(--font-mono)" }}>desktop-watcher/ChessStream-Watcher.exe</code>) — it re-reads the folder about once a second and uploads changes automatically.
+              </span>
             </div>
           )}
 

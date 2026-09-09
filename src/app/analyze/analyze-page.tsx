@@ -317,7 +317,29 @@ export default function AnalyzePage() {
 
     (async () => {
       // Local Stockfish first; the worker returns null when it can't start.
-      const local = await analyzePosition({ fen, multiPv: 3, depth: 18 });
+      const local = await analyzePosition({
+        fen,
+        multiPv: 3,
+        depth: 14,
+        // Stream partial results as soon as the engine reaches depth ~8
+        // (~0.3s) so the eval bar paints almost immediately, then refines.
+        onUpdate: (partial) => {
+          if (reqId !== evalRequestRef.current) return;
+          if (!partial.lines || partial.lines.length === 0) return;
+          const top = partial.lines[0];
+          setEngine({
+            fen: partial.fen,
+            evalCp: top?.evalCp,
+            evalMate: top?.evalMate,
+            depth: partial.depth || 1,
+            lines: partial.lines.map((l) => ({
+              san: pvToSan(fen, l.san),
+              evalCp: l.evalCp,
+              evalMate: l.evalMate,
+            })),
+          });
+        },
+      });
       if (reqId !== evalRequestRef.current) return;
       if (local && local.lines && local.lines.length > 0) {
         const lines: EngineLine[] = local.lines.map((l) => ({

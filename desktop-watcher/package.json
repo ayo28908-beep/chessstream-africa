@@ -1,0 +1,16 @@
+{
+  "name": "chessstream-watcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DGT folder watcher for ChessStream Africa broadcasts. Watches a folder of PGN files (written by a DGT board) and uploads changes to a broadcast ~1x/sec. Subfolders become categories, file names become rounds.",
+  "main": "watcher.js",
+  "bin": "watcher.js",
+  "scripts": {
+    "start": "node watcher.js",
+    "setup": "node watcher.js --setup",
+    "build": "npx -y @yao-pkg/pkg@6.22.0 . --targets node20-win-x64 --output ChessStream-Watcher.exe"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
